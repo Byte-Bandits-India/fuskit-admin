@@ -9,7 +9,7 @@ import { HomePageBanner } from '@/components/dashboard/HomePageBanner';
 
 export const DashboardPage: React.FC = () => {
   return (
-    <div className="flex flex-col gap-3 md:gap-[14px] p-3 md:p-5 md:px-6">
+    <div className="flex flex-col gap-3 md:gap-[14px] p-3 md:p-5 md:px-6 rounded-xl bg-[#F7F3EE]">
 
       {/* Announcement bar */}
       <AnnouncementBanner />

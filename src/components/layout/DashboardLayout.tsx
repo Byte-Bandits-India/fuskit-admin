@@ -47,7 +47,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
         isOpen={sidebarOpen}
       />
 
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden" style={{ background: 'var(--bg-card)' }}>
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Topbar
           breadcrumb={breadcrumb}
           sidebarOpen={sidebarOpen}
@@ -56,7 +56,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
         />
         <main
           className="flex-1 overflow-y-auto"
-          style={{ background: 'var(--bg-page)' }}
         >
           {typeof children === 'function' ? children(activeId) : children}
         </main>
