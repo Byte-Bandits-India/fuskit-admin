@@ -278,7 +278,7 @@ export const MenuItemsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-3 md:gap-[14px] p-3 md:p-5 md:px-6">
+    <div className="flex flex-col gap-3 md:gap-[14px] p-3 md:p-5 md:px-6 bg-[#F7F3EE] min-h-full rounded-xl">
 
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">

@@ -196,7 +196,7 @@ export const ManageStoresPage: React.FC = () => {
     : '??';
 
   return (
-    <div className="flex flex-col gap-4 p-4 md:p-5 min-h-full overflow-y-auto">
+    <div className="flex flex-col gap-4 p-4 md:p-5 min-h-full overflow-y-auto bg-[#F7F3EE] rounded-xl">
 
       {/* ═══ PAGE HEADER ═══ */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
@@ -350,7 +350,7 @@ export const ManageStoresPage: React.FC = () => {
             </InfoCard>
 
             {/* ── Exclusive Items ── */}
-            <InfoCard title={`Exclusive items — ${selectedStore.city} only`} icon={<StarIcon />} editLabel="Manage" onEdit={() => {}}>
+            <InfoCard title={`Exclusive items — ${selectedStore.city} only`} icon={<StarIcon />} editLabel="Manage" onEdit={() => { }}>
               <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2">
                 {exclusives.map((item, i) => (
                   <div key={i} className="flex items-center gap-[9px] px-3 py-[10px] rounded-[10px] transition-all cursor-pointer relative group"
@@ -389,7 +389,7 @@ export const ManageStoresPage: React.FC = () => {
             </InfoCard>
 
             {/* ── Store Photos ── */}
-            <InfoCard title="Store photos" icon={<ImageIcon />} editLabel="Manage gallery" onEdit={() => {}}>
+            <InfoCard title="Store photos" icon={<ImageIcon />} editLabel="Manage gallery" onEdit={() => { }}>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {gallery.map((g, i) => (
                   <div key={i} className="w-20 h-20 rounded-[9px] flex-shrink-0 flex items-center justify-center text-[28px] cursor-pointer transition-all relative overflow-hidden group"

@@ -25,21 +25,44 @@ const banners: BannerItem[] = [
     altText: 'Alt text: Home Page Custom Banner Image 1',
     enabled: true,
   },
+  {
+    id: '2',
+    title: 'Spring Season Special',
+    metaTitle: 'Meta Title : Spring Promo',
+    altText: 'Alt text: Home Page Spring Banner Image',
+    enabled: false,
+  },
+  {
+    id: '3',
+    title: 'New Store Launch',
+    metaTitle: 'Meta Title : Bangalore Store Launch',
+    altText: 'Alt text: Home Page Bangalore Banner Image',
+    enabled: true,
+  },
+  {
+    id: '4',
+    title: 'Weekend Dessert Offers',
+    metaTitle: 'Meta Title : Weekend Desserts',
+    altText: 'Alt text: Home Page Dessert Offers Image',
+    enabled: false,
+  },
 ];
 
 export const HomePageBanner: React.FC = () => (
   <Card>
     <CardHeader title={<><ImageIcon /> Home Page Banner</>} />
     <CardBody>
-      <div className="flex flex-col gap-3">
+      <div 
+        className="flex flex-col gap-4 h-[60px] overflow-y-auto snap-y snap-mandatory" 
+        style={{ 
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none' 
+        }}
+      >
         {banners.map(banner => (
           <div
             key={banner.id}
-            className="flex items-start gap-3 p-3 rounded-[10px]"
-            style={{
-              background: 'var(--bg-card2)',
-              border: '1px solid var(--border)',
-            }}
+            className="flex items-start gap-3 snap-start shrink-0 h-[60px]"
           >
             {/* Banner thumbnail */}
             <div

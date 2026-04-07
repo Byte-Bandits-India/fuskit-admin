@@ -17,10 +17,22 @@ export const Topbar: React.FC<TopbarProps> = ({
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setProfileOpen(false);
+      }
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setFilterOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setNotifOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -73,7 +85,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           style={{
             width: 320,
             maxWidth: '100%',
-            background: 'rgba(240,217,192,0.08)',
+            background: 'white',
             border: '1px solid rgba(240,217,192,0.12)',
           }}
           onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = 'rgba(240,217,192,0.2)')}
@@ -83,36 +95,106 @@ export const Topbar: React.FC<TopbarProps> = ({
             if (input) input.focus();
           }}
         >
-          <svg viewBox="0 0 24 24" className="w-[13px] h-[13px] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'rgba(240,217,192,0.4)' }}>
+          <svg viewBox="0 0 24 24" className="w-[13px] h-[13px] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: '#552710' }}>
             <path d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
           </svg>
           <input
             type="text"
             className="text-xs flex-1 bg-transparent border-none outline-none"
             placeholder="Search menu, stores, settings…"
-            style={{ color: 'rgba(240,217,192,0.8)' }}
+            style={{ color: '#552710' }}
           />
-          <kbd
-            className="text-[10px] px-[5px] py-[1px] rounded hidden lg:inline"
-            style={{
-              background: 'rgba(240,217,192,0.08)',
-              border: '1px solid rgba(240,217,192,0.15)',
-              color: 'rgba(240,217,192,0.4)',
-            }}
-          >
-            ⌘K
-          </kbd>
+          <div className="relative flex items-center" ref={filterRef}>
+            <div
+              className="flex items-center justify-center rounded-full cursor-pointer transition-colors flex-shrink-0"
+              style={{
+                width: 24,
+                height: 24,
+                background: 'rgba(245, 106, 39, 0.1)',
+                border: '1px solid #F56A27',
+                color: '#F56A27',
+              }}
+              onClick={e => {
+                e.stopPropagation();
+                setFilterOpen(!filterOpen);
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(245, 106, 39, 0.2)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(245, 106, 39, 0.1)')}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+            </div>
+            {filterOpen && (
+              <div
+                className="absolute right-0 top-[125%] mt-[8px] w-48 rounded-lg shadow-xl overflow-hidden backdrop-blur-md z-50 animate-in fade-in slide-in-from-top-2 duration-200"
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="px-3 py-2 border-b border-[var(--border)]">
+                  <div className="text-[12px] font-semibold text-[var(--text-primary)]">Filter By</div>
+                </div>
+                <div className="p-1.5 flex flex-col gap-0.5">
+                  {['Stores', 'Categories', 'Menu Items'].map(f => (
+                    <label key={f} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-hover)] cursor-pointer text-[11px] text-[var(--text-primary)] transition-colors">
+                      <input type="checkbox" className="rounded border-[var(--border)] bg-transparent w-3 h-3 text-[var(--orange)] focus:ring-0 cursor-pointer" />
+                      {f}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Right actions */}
       <div className="flex items-center gap-[10px]">
         {/* Notification bell */}
-        <IconButton hasNotif>
-          <svg viewBox="0 0 24 24" className="w-[15px] h-[15px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'rgba(240,217,192,0.6)' }}>
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
-          </svg>
-        </IconButton>
+        <div className="relative" ref={notifRef}>
+          <IconButton hasNotif onClick={() => setNotifOpen(!notifOpen)}>
+            <svg viewBox="0 0 24 24" className="w-[15px] h-[15px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'rgba(240,217,192,0.6)' }}>
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+            </svg>
+          </IconButton>
+          
+          {notifOpen && (
+            <div
+              className="absolute right-0 mt-2 w-[280px] sm:w-[320px] rounded-lg shadow-xl overflow-hidden backdrop-blur-md z-[100] animate-in fade-in slide-in-from-top-2 duration-200"
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div className="px-4 py-3 border-b border-[var(--border)] flex justify-between items-center">
+                <div className="text-[13px] font-semibold text-[var(--text-primary)]">Notifications</div>
+                <span className="text-[10px] text-[var(--orange)] cursor-pointer hover:underline">Mark all read</span>
+              </div>
+              <div className="max-h-[320px] overflow-y-auto">
+                {[
+                  { title: 'New Store Added', desc: 'A new store was added in Chennai region', time: '2 mins ago', unread: true },
+                  { title: 'Menu Item Updated', desc: 'Spicy Chicken Burger price was updated', time: '1 hour ago', unread: true },
+                  { title: 'System Notice', desc: 'Scheduled maintenance will occur tonight at 2 AM', time: '5 hours ago', unread: false },
+                ].map((n, i) => (
+                  <div key={i} className="px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-hover)] cursor-pointer flex gap-3 transition-colors">
+                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: n.unread ? 'var(--orange)' : 'transparent' }}></div>
+                    <div>
+                      <div className="text-[12px] font-medium text-[var(--text-primary)]">{n.title}</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{n.desc}</div>
+                      <div className="text-[10px] mt-1" style={{ color: 'rgba(240,217,192,0.4)' }}>{n.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="px-4 py-2 text-center border-t border-[var(--border)] hover:bg-[var(--bg-hover)] cursor-pointer transition-colors">
+                <span className="text-[11px] font-medium text-[var(--text-primary)]">View all notifications</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Profile */}
         <div className="relative" ref={profileRef}>
@@ -199,11 +281,13 @@ export const Topbar: React.FC<TopbarProps> = ({
 interface IconButtonProps {
   children: React.ReactNode;
   hasNotif?: boolean;
+  onClick?: () => void;
 }
 
-const IconButton: React.FC<IconButtonProps> = ({ children, hasNotif }) => (
+const IconButton: React.FC<IconButtonProps> = ({ children, hasNotif, onClick }) => (
   <div
     className="relative flex items-center justify-center rounded-lg cursor-pointer transition-all"
+    onClick={onClick}
     style={{
       width: 34, height: 34,
       background: 'rgba(240,217,192,0.06)',

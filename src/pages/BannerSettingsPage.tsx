@@ -26,31 +26,49 @@ export interface Banner {
 
 /* ─── Mock Data ─── */
 const INITIAL_BANNERS: Banner[] = [
-  { id: '1', name: 'Homepage Hero — Buns Season', type: 'hero', status: 'active', emoji: '🥐', thumbBg: 'linear-gradient(135deg,#1C0F05,#3B2010)',
+  {
+    id: '1', name: 'Homepage Hero — Buns Season', type: 'hero', status: 'active', emoji: '🥐', thumbBg: 'linear-gradient(135deg,#1C0F05,#3B2010)',
     title: 'Fusk boring desserts.', subtitle: 'Bold buns, signature drinks & indulgent treats.', ctaLabel: 'Explore Menu →', ctaLink: '/menu/buns',
-    schedule: 'Live now · No end date', enabled: true, order: 1, altText: 'Fusk-it homepage hero — bold bun desserts Chennai' },
-  { id: '2', name: 'Now open in Bangalore!', type: 'announcement', status: 'active', emoji: '📢', thumbBg: '#E8F5E9',
-    title: 'Now open in Bangalore! Visit us on ECR, Chennai — Open everyday', schedule: 'Live now · No end date', enabled: true, order: 2 },
-  { id: '3', name: 'Drinks Section Banner', type: 'menu', status: 'active', emoji: '🥤', thumbBg: '#E3F2FD',
+    schedule: 'Live now · No end date', enabled: true, order: 1, altText: 'Fusk-it homepage hero — bold bun desserts Chennai'
+  },
+  {
+    id: '2', name: 'Now open in Bangalore!', type: 'announcement', status: 'active', emoji: '📢', thumbBg: '#E8F5E9',
+    title: 'Now open in Bangalore! Visit us on ECR, Chennai — Open everyday', schedule: 'Live now · No end date', enabled: true, order: 2
+  },
+  {
+    id: '3', name: 'Drinks Section Banner', type: 'menu', status: 'active', emoji: '🥤', thumbBg: '#E3F2FD',
     title: 'Cool drinks, hot vibes', subtitle: 'Try our Malaysian Milo & more', ctaLabel: 'Order now', ctaLink: '/menu/drinks',
-    schedule: 'Live · Ends 30 Jun 2026', enabled: true, order: 3 },
-  { id: '4', name: 'Summer Special Offer Popup', type: 'popup', status: 'scheduled', emoji: '🎉', thumbBg: 'var(--purple-bg)',
+    schedule: 'Live · Ends 30 Jun 2026', enabled: true, order: 3
+  },
+  {
+    id: '4', name: 'Summer Special Offer Popup', type: 'popup', status: 'scheduled', emoji: '🎉', thumbBg: 'var(--purple-bg)',
     title: 'Summer Special!', subtitle: 'Get 20% off on all drinks this summer. Use code SUMMER20.', ctaLabel: 'Grab the deal →', ctaLink: '/menu',
-    schedule: 'Starts 1 Jun · Ends 30 Jun 2026', enabled: false, order: 4 },
-  { id: '5', name: 'Fries Fest — Old Campaign', type: 'hero', status: 'inactive', emoji: '🍟', thumbBg: '#ECEFF1',
+    schedule: 'Starts 1 Jun · Ends 30 Jun 2026', enabled: false, order: 4
+  },
+  {
+    id: '5', name: 'Fries Fest — Old Campaign', type: 'hero', status: 'inactive', emoji: '🍟', thumbBg: '#ECEFF1',
     title: 'Fries Fest is here!', subtitle: 'Limited time loaded fries collection.', ctaLabel: 'See Fries', ctaLink: '/menu/fries',
-    schedule: 'Ended 1 Apr 2026', enabled: false, order: 5 },
-  { id: '6', name: 'Buns Category Hero', type: 'menu', status: 'active', emoji: '🥐', thumbBg: '#FFF3E0',
+    schedule: 'Ended 1 Apr 2026', enabled: false, order: 5
+  },
+  {
+    id: '6', name: 'Buns Category Hero', type: 'menu', status: 'active', emoji: '🥐', thumbBg: '#FFF3E0',
     title: 'Bun Butter Jam — our bestseller', subtitle: 'Try it before it sells out!', ctaLabel: 'View Buns', ctaLink: '/menu/buns',
-    schedule: 'Live now · No end date', enabled: true, order: 6 },
-  { id: '7', name: 'Maggi Monday Offer', type: 'announcement', status: 'active', emoji: '🍜', thumbBg: '#F3E5F5',
-    title: '🍜 Maggi Mondays — Flat ₹79 every Monday!', schedule: 'Live now · No end date', enabled: true, order: 7 },
-  { id: '8', name: 'New Store Popup', type: 'popup', status: 'scheduled', emoji: '🏪', thumbBg: 'var(--blue-bg)',
+    schedule: 'Live now · No end date', enabled: true, order: 6
+  },
+  {
+    id: '7', name: 'Maggi Monday Offer', type: 'announcement', status: 'active', emoji: '🍜', thumbBg: '#F3E5F5',
+    title: '🍜 Maggi Mondays — Flat ₹79 every Monday!', schedule: 'Live now · No end date', enabled: true, order: 7
+  },
+  {
+    id: '8', name: 'New Store Popup', type: 'popup', status: 'scheduled', emoji: '🏪', thumbBg: 'var(--blue-bg)',
     title: 'We\'re in Bangalore!', subtitle: 'Visit our brand new Bangalore location.', ctaLabel: 'Get Directions', ctaLink: '/stores/bangalore',
-    schedule: 'Starts 15 Apr 2026', enabled: false, order: 8 },
-  { id: '9', name: 'Signatures Menu Banner', type: 'menu', status: 'expired', emoji: '⭐', thumbBg: '#FCE4EC',
+    schedule: 'Starts 15 Apr 2026', enabled: false, order: 8
+  },
+  {
+    id: '9', name: 'Signatures Menu Banner', type: 'menu', status: 'expired', emoji: '⭐', thumbBg: '#FCE4EC',
     title: 'Signatures Collection', ctaLabel: 'View Signatures', ctaLink: '/menu/signatures',
-    schedule: 'Expired 1 Mar 2026', enabled: false, order: 9 },
+    schedule: 'Expired 1 Mar 2026', enabled: false, order: 9
+  },
 ];
 
 const TYPE_COLORS: Record<BannerType, { accent: string; bg: string; color: string; label: string }> = {
@@ -168,7 +186,7 @@ export const BannerSettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-3 md:gap-[14px] p-3 md:p-5 md:px-6 min-h-full">
+    <div className="flex flex-col gap-3 md:gap-[14px] p-3 md:p-5 md:px-6 min-h-full bg-[#F7F3EE] rounded-xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 flex-shrink-0">
         <div>

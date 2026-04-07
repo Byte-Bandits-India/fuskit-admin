@@ -152,7 +152,7 @@ export const UsersPermissionsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4 md:p-5 min-h-full overflow-y-auto">
+    <div className="flex flex-col gap-4 p-4 md:p-5 min-h-full overflow-y-auto bg-[#F7F3EE] rounded-xl">
 
       {/* ═══ Header ═══ */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
@@ -365,7 +365,7 @@ export const UsersPermissionsPage: React.FC = () => {
       </div>
 
       {/* ═══ Modals ═══ */}
-      <UserDrawer open={drawerOpen} mode={drawerMode} user={selectedUser} onClose={() => setDrawerOpen(false)} onSave={() => {}} />
+      <UserDrawer open={drawerOpen} mode={drawerMode} user={selectedUser} onClose={() => setDrawerOpen(false)} onSave={() => { }} />
       <DeleteModal open={deleteModalOpen} categoryName={deleteUserName} onClose={() => setDeleteModalOpen(false)} onConfirm={handleDeleteConfirm} />
     </div>
   );

@@ -55,7 +55,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
           onLogout={onLogout}
         />
         <main
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto bg-[#2C1A0E]"
         >
           {typeof children === 'function' ? children(activeId) : children}
         </main>
