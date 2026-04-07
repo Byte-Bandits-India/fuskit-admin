@@ -16,6 +16,7 @@ export const StoreStatus: React.FC = () => (
         <span
           className="text-[11px] font-semibold cursor-pointer hover:underline"
           style={{ color: 'var(--red)' }}
+          onClick={() => { window.location.hash = 'manage-stores'; }}
         >
           Edit →
         </span>
@@ -76,6 +77,10 @@ export const StoreStatus: React.FC = () => (
                     background: 'var(--bg-card)',
                     border: '1px solid var(--border)',
                     color: 'var(--text-secondary)',
+                  }}
+                  onClick={(e) => { 
+                    e.stopPropagation();
+                    window.location.hash = 'manage-stores'; 
                   }}
                 >
                   Edit

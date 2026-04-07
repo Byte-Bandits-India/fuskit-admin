@@ -22,10 +22,11 @@ export const Card: React.FC<CardProps> = ({ children, className }) => (
 interface CardHeaderProps {
   title: React.ReactNode;
   action?: React.ReactNode;
+  onActionClick?: () => void;
   right?: React.ReactNode;
 }
 
-export const CardHeader: React.FC<CardHeaderProps> = ({ title, action, right }) => (
+export const CardHeader: React.FC<CardHeaderProps> = ({ title, action, onActionClick, right }) => (
   <div
     className="flex items-center justify-between gap-3 px-4 py-[13px]"
     style={{
@@ -40,6 +41,7 @@ export const CardHeader: React.FC<CardHeaderProps> = ({ title, action, right }) 
       <div
         className="flex items-center gap-1 text-[11px] font-semibold cursor-pointer hover:underline"
         style={{ color: 'var(--orange)' }}
+        onClick={onActionClick}
       >
         {action}
         <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

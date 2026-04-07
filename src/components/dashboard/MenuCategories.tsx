@@ -13,6 +13,7 @@ export const MenuCategories: React.FC = () => (
     <CardHeader
       title={<><ListIcon /> Menu Categories</>}
       action="View all"
+      onActionClick={() => { window.location.hash = 'menu-items'; }}
     />
     <CardBody>
       <div className="flex flex-wrap gap-[6px]">
