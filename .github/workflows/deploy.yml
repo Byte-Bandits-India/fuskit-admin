@@ -53,12 +53,12 @@ jobs:
 
             if [ "${{ github.ref_name }}" = "main" ]; then
               echo "📦 PRODUCTION DEPLOY"
-              APP_DIR="/var/www/prod"
+              APP_DIR="/var/www/admin/prod"
               PORT=3000
               APP_NAME="vite-admin-prod"
             else
               echo "🧪 STAGING DEPLOY"
-              APP_DIR="/var/www/staging"
+              APP_DIR="/var/www/admin/dev"
               PORT=3001
               APP_NAME="vite-admin-staging"
             fi
