@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/utils/cn';
+import type { UserData } from '@/types';
+import { hasModuleViewPerm } from './DashboardLayout';
 
 // Asset imports
 import logoImg from '@/assets/logo.png';
@@ -14,6 +16,7 @@ interface SidebarProps {
   activeId: string;
   onNavClick: (id: string) => void;
   isOpen: boolean;
+  user?: UserData | null;
 }
 
 /* ─── Chevron (keep as SVG — no image for this) ──────── */
@@ -50,7 +53,7 @@ const ImgIcon: React.FC<{ src: string; size?: number; className?: string; style?
   />
 );
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavClick, isOpen }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavClick, isOpen, user }) => {
   const [menuOpen, setMenuOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(true);
 
@@ -116,74 +119,79 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavClick, isOpen }
       </div>
 
       {/* Users & Permissions */}
-      <div className={cn('mt-1', collapsed ? 'px-1' : 'px-2')}>
-        <div
-          onClick={() => onNavClick('users-permissions')}
-          className={cn(
-            'flex items-center gap-[10px] py-[9px] rounded-lg cursor-pointer transition-all',
-            collapsed ? 'justify-center px-0' : 'px-3',
-            activeId === 'users-permissions' ? 'sidebar-item-active' : 'sidebar-item-hover'
-          )}
-          title={collapsed ? 'Users & Permissions' : undefined}
-        >
-          <ImgIcon
-            src={manageImg}
-            size={15}
-            style={{
-              filter: activeId === 'users-permissions'
-                ? 'brightness(0) saturate(100%) invert(52%) sepia(85%) saturate(500%) hue-rotate(350deg)'
-                : 'brightness(0) invert(76%) sepia(2%) saturate(91%) hue-rotate(352deg) brightness(85%) contrast(85%)',
-              opacity: 1,
-            }}
-          />
-          {!collapsed && (
-            <span
-              className="text-[13px]"
+      {hasModuleViewPerm(user, 'users') && (
+        <div className={cn('mt-1', collapsed ? 'px-1' : 'px-2')}>
+          <div
+            onClick={() => onNavClick('users-permissions')}
+            className={cn(
+              'flex items-center gap-[10px] py-[9px] rounded-lg cursor-pointer transition-all',
+              collapsed ? 'justify-center px-0' : 'px-3',
+              activeId === 'users-permissions' ? 'sidebar-item-active' : 'sidebar-item-hover'
+            )}
+            title={collapsed ? 'Users & Permissions' : undefined}
+          >
+            <ImgIcon
+              src={manageImg}
+              size={15}
               style={{
-                color: activeId === 'users-permissions' ? 'var(--orange)' : '#ADACAB',
-                fontWeight: activeId === 'users-permissions' ? 600 : 400,
+                filter: activeId === 'users-permissions'
+                  ? 'brightness(0) saturate(100%) invert(52%) sepia(85%) saturate(500%) hue-rotate(350deg)'
+                  : 'brightness(0) invert(76%) sepia(2%) saturate(91%) hue-rotate(352deg) brightness(85%) contrast(85%)',
+                opacity: 1,
               }}
-            >
-              Users & Permissions
-            </span>
-          )}
+            />
+            {!collapsed && (
+              <span
+                className="text-[13px]"
+                style={{
+                  color: activeId === 'users-permissions' ? 'var(--orange)' : '#ADACAB',
+                  fontWeight: activeId === 'users-permissions' ? 600 : 400,
+                }}
+              >
+                Users & Permissions
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Menu section (collapsible) */}
-      <div className={cn('mt-1', collapsed ? 'px-1' : 'px-2')}>
-        <div
-          onClick={() => collapsed ? undefined : setMenuOpen(!menuOpen)}
-          className={cn(
-            'flex items-center gap-[10px] py-[9px] rounded-lg cursor-pointer transition-colors sidebar-item-hover',
-            collapsed ? 'justify-center px-0' : 'px-3',
-          )}
-          title={collapsed ? 'Menu' : undefined}
-        >
-          <ImgIcon
-            src={menuImg}
-            size={15}
-            style={{
-              filter: 'brightness(0) invert(76%) sepia(2%) saturate(91%) hue-rotate(352deg) brightness(85%) contrast(85%)',
-              opacity: 1,
-            }}
-          />
-          {!collapsed && (
-            <>
-              <span className="text-[13px] flex-1" style={{ color: '#ADACAB' }}>Menu</span>
-              <span style={{ color: '#ADACAB' }}>
-                <ChevronIcon open={menuOpen} />
-              </span>
-            </>
-          )}
-        </div>
+      {(hasModuleViewPerm(user, 'categories') || hasModuleViewPerm(user, 'items')) && (
+        <div className={cn('mt-1', collapsed ? 'px-1' : 'px-2')}>
+          <div
+            onClick={() => collapsed ? undefined : setMenuOpen(!menuOpen)}
+            className={cn(
+              'flex items-center gap-[10px] py-[9px] rounded-lg cursor-pointer transition-colors sidebar-item-hover',
+              collapsed ? 'justify-center px-0' : 'px-3',
+            )}
+            title={collapsed ? 'Menu' : undefined}
+          >
+            <ImgIcon
+              src={menuImg}
+              size={15}
+              style={{
+                filter: 'brightness(0) invert(76%) sepia(2%) saturate(91%) hue-rotate(352deg) brightness(85%) contrast(85%)',
+                opacity: 1,
+              }}
+            />
+            {!collapsed && (
+              <>
+                <span className="text-[13px] flex-1" style={{ color: '#ADACAB' }}>Menu</span>
+                <span style={{ color: '#ADACAB' }}>
+                  <ChevronIcon open={menuOpen} />
+                </span>
+              </>
+            )}
+          </div>
 
         {!collapsed && menuOpen && (
           <div className="ml-3 pl-0">
             {[
-              { id: 'categories', label: 'Categories' },
-              { id: 'menu-items', label: 'Menu Items' },
-            ].map(item => (
+              { id: 'categories', label: 'Categories', mod: 'categories' },
+              { id: 'menu-items', label: 'Menu Items', mod: 'items' },
+            ]
+            .filter(item => hasModuleViewPerm(user, item.mod))
+            .map(item => (
               <div
                 key={item.id}
                 onClick={() => onNavClick(item.id)}
@@ -205,77 +213,82 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavClick, isOpen }
             ))}
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Site settings section (collapsible) */}
-      <div className={cn('mt-1 mb-4', collapsed ? 'px-1' : 'px-2')}>
-        <div
-          onClick={() => collapsed ? undefined : setSettingsOpen(!settingsOpen)}
-          className={cn(
-            'flex items-center gap-[10px] py-[9px] rounded-lg cursor-pointer transition-colors sidebar-item-hover',
-            collapsed ? 'justify-center px-0' : 'px-3',
-          )}
-          title={collapsed ? 'Site settings' : undefined}
-        >
-          <ImgIcon
-            src={siteImg}
-            size={15}
-            style={{
-              filter: 'brightness(0) invert(76%) sepia(2%) saturate(91%) hue-rotate(352deg) brightness(85%) contrast(85%)',
-              opacity: 1,
-            }}
-          />
-          {!collapsed && (
-            <>
-              <span className="text-[13px] flex-1" style={{ color: '#ADACAB' }}>Site settings</span>
-              <span style={{ color: '#ADACAB' }}>
-                <ChevronIcon open={settingsOpen} />
-              </span>
-            </>
-          )}
-        </div>
-
-        {!collapsed && settingsOpen && (
-          <div className="ml-3 pl-0">
-            {[
-              { id: 'banner-settings', label: 'Banner settings' },
-              { id: 'manage-stores', label: 'Manage Stores', badge: 2 },
-            ].map(item => (
-              <div
-                key={item.id}
-                onClick={() => onNavClick(item.id)}
-                className={cn(
-                  "flex items-center gap-[8px] pl-4 pr-3 py-[7px] cursor-pointer transition-colors rounded-r-lg border-l-2",
-                  activeId === item.id ? "sidebar-item-active" : "sidebar-item-hover"
-                )}
-                style={{
-                  borderColor: activeId === item.id ? 'var(--orange)' : 'rgba(240,217,192,0.1)'
-                }}>
-                <span
-                  className="text-[12px] flex-1"
-                  style={{
-                    color: activeId === item.id ? 'var(--orange)' : '#ADACAB',
-                    fontWeight: activeId === item.id ? 600 : 400,
-                  }}
-                >
-                  {item.label}
+      {(hasModuleViewPerm(user, 'banners') || hasModuleViewPerm(user, 'stores')) && (
+        <div className={cn('mt-1 mb-4', collapsed ? 'px-1' : 'px-2')}>
+          <div
+            onClick={() => collapsed ? undefined : setSettingsOpen(!settingsOpen)}
+            className={cn(
+              'flex items-center gap-[10px] py-[9px] rounded-lg cursor-pointer transition-colors sidebar-item-hover',
+              collapsed ? 'justify-center px-0' : 'px-3',
+            )}
+            title={collapsed ? 'Site settings' : undefined}
+          >
+            <ImgIcon
+              src={siteImg}
+              size={15}
+              style={{
+                filter: 'brightness(0) invert(76%) sepia(2%) saturate(91%) hue-rotate(352deg) brightness(85%) contrast(85%)',
+                opacity: 1,
+              }}
+            />
+            {!collapsed && (
+              <>
+                <span className="text-[13px] flex-1" style={{ color: '#ADACAB' }}>Site settings</span>
+                <span style={{ color: '#ADACAB' }}>
+                  <ChevronIcon open={settingsOpen} />
                 </span>
-                {item.badge !== undefined && (
+              </>
+            )}
+          </div>
+
+          {!collapsed && settingsOpen && (
+            <div className="ml-3 pl-0">
+              {[
+                { id: 'banner-settings', label: 'Banner settings', mod: 'banners' },
+                { id: 'manage-stores', label: 'Manage Stores', badge: 2, mod: 'stores' },
+              ]
+              .filter(item => hasModuleViewPerm(user, item.mod))
+              .map(item => (
+                <div
+                  key={item.id}
+                  onClick={() => onNavClick(item.id)}
+                  className={cn(
+                    "flex items-center gap-[8px] pl-4 pr-3 py-[7px] cursor-pointer transition-colors rounded-r-lg border-l-2",
+                    activeId === item.id ? "sidebar-item-active" : "sidebar-item-hover"
+                  )}
+                  style={{
+                    borderColor: activeId === item.id ? 'var(--orange)' : 'rgba(240,217,192,0.1)'
+                  }}>
                   <span
-                    className="text-[10px] px-[6px] py-[1px] rounded-[10px]"
+                    className="text-[12px] flex-1"
                     style={{
-                      background: 'rgba(240,217,192,0.12)',
-                      color: '#ADACAB',
+                      color: activeId === item.id ? 'var(--orange)' : '#ADACAB',
+                      fontWeight: activeId === item.id ? 600 : 400,
                     }}
                   >
-                    {item.badge}
+                    {item.label}
                   </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  {item.badge !== undefined && (
+                    <span
+                      className="text-[10px] px-[6px] py-[1px] rounded-[10px]"
+                      style={{
+                        background: 'rgba(240,217,192,0.12)',
+                        color: '#ADACAB',
+                      }}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div
@@ -301,11 +314,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavClick, isOpen }
           </div>
         )}
         {[
-          { id: 'upload-banner', label: 'Upload Banner', img: uploadImg, isPrimary: false },
-          { id: 'add-store', label: 'Add Store', img: storeImg, isPrimary: false },
-          { id: 'add-product', label: 'Add Product', img: null, isPrimary: false },
-          { id: 'manage-users', label: 'Manage Users', img: manageImg, isPrimary: false },
-        ].map(action => (
+          { id: 'upload-banner', label: 'Upload Banner', img: uploadImg, isPrimary: false, mod: 'banners' },
+          { id: 'add-store', label: 'Add Store', img: storeImg, isPrimary: false, mod: 'stores' },
+          { id: 'add-product', label: 'Add Product', img: null, isPrimary: false, mod: 'items' },
+          { id: 'manage-users', label: 'Manage Users', img: manageImg, isPrimary: false, mod: 'users' },
+        ]
+        .filter(action => hasModuleViewPerm(user, action.mod))
+        .map(action => (
           <div
             key={action.id}
             onClick={() => {

@@ -11,11 +11,26 @@ import './index.css';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    
+    if (token) {
+      localStorage.setItem('fuskit_token', token);
+      localStorage.setItem('fuskit_auth', 'true');
+      
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      window.history.replaceState({}, '', url);
+      
+      return true;
+    }
+    
     return localStorage.getItem('fuskit_auth') === 'true';
   });
 
   const handleLogout = () => {
     localStorage.removeItem('fuskit_auth');
+    localStorage.removeItem('fuskit_token');
     setIsAuthenticated(false);
   };
 

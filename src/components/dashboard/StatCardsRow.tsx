@@ -1,6 +1,7 @@
 import React from 'react';
-
-/* ─── Mini Charts ──────────────────────────────────────── */
+import catImg from '@/assets/1.png';
+import menuImg from '@/assets/2.png';
+import storeImg from '@/assets/3.png';
 
 const MiniBarChart: React.FC<{ color: string }> = ({ color }) => {
   const bars = [
@@ -49,57 +50,51 @@ const DonutChart: React.FC<{ value: number; label: string }> = ({ value, label }
 /* ─── Card Components ──────────────────────────────────── */
 
 const cardBase = {
-  background: 'var(--bg-card)',
-  border: '1px solid var(--border)',
-  boxShadow: 'var(--shadow-sm)',
+  background: '#FFFFFF',
+  border: '1px solid rgba(0,0,0,0.06)',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
 };
 
 const cardHoverProps = {
   onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    el.style.boxShadow = 'var(--shadow-md)';
+    el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)';
     el.style.transform = 'translateY(-2px)';
   },
   onMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
-    el.style.boxShadow = 'var(--shadow-sm)';
+    el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.03)';
     el.style.transform = '';
   }
 };
 
 const CategoriesCard: React.FC = () => (
   <div
-    className="flex flex-col items-start rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all duration-[180ms] h-full"
+    className="flex flex-col items-start rounded-2xl p-5 cursor-pointer relative overflow-hidden transition-all duration-300 w-full min-h-[200px]"
     style={cardBase}
     {...cardHoverProps}
   >
-    <div className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 mb-3" style={{ background: 'rgba(245, 106, 39, 0.1)' }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-      </svg>
+    <img src={catImg} alt="" className="absolute -right-2 top-1/2 -translate-y-1/2 w-[140px] h-[140px] object-contain pointer-events-none opacity-90" style={{ transform: 'translate(10%, -20%)' }} />
+    
+    <div className="flex flex-col items-start relative z-10 w-full">
+      <div className="text-[17px] font-bold" style={{ color: '#1B1512' }}>Categories</div>
+      <div className="text-[13px] mt-[1px]" style={{ color: '#979797' }}>Last Week</div>
     </div>
 
-    <div className="flex flex-col items-start">
-      <div className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Categories</div>
-      <div className="text-[10px] mt-[1px]" style={{ color: 'var(--text-muted)' }}>Last Week</div>
+    <div className="flex items-baseline gap-2 mt-[18px] mb-2 relative z-10">
+      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>4</span>
+      <span className="text-[18px] font-medium" style={{ color: '#41735D' }}>Items</span>
     </div>
 
-    <div className="flex flex-col justify-center mt-3 mb-3">
-      <span className="font-display text-[32px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>4</span>
-    </div>
-
-    <div className="w-full mt-auto pt-1 flex flex-col items-start gap-[6px]">
+    <div className="w-full mt-auto flex flex-col items-start gap-[8px] relative z-10">
       <span
-        className="text-[10px] font-bold px-[10px] py-[3px] rounded-[20px] border border-[#41735D]"
-        style={{ background: 'rgba(43, 43, 43, 0.1)', color: '#2B2B2B' }}
+        className="text-[11px] font-medium px-[24px] py-[4px] rounded-[14px] border border-[#41735D]"
+        style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
       >
-        0 hidden
+        6 hidden
       </span>
-      <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
-        +0 since last week
+      <span className="text-[12px] font-medium" style={{ color: '#979797' }}>
+        0 since last week
       </span>
     </div>
   </div>
@@ -107,38 +102,30 @@ const CategoriesCard: React.FC = () => (
 
 const MenuItemsCard: React.FC = () => (
   <div
-    className="flex flex-col items-start rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all duration-[180ms] h-full"
+    className="flex flex-col items-start rounded-2xl p-5 cursor-pointer relative overflow-hidden transition-all duration-300 w-full min-h-[200px]"
     style={cardBase}
     {...cardHoverProps}
   >
-    <div className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 mb-3" style={{ background: 'rgba(45, 134, 83, 0.1)' }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="8" y1="6" x2="21" y2="6" />
-        <line x1="8" y1="12" x2="21" y2="12" />
-        <line x1="8" y1="18" x2="21" y2="18" />
-        <line x1="3" y1="6" x2="3.01" y2="6" />
-        <line x1="3" y1="12" x2="3.01" y2="12" />
-        <line x1="3" y1="18" x2="3.01" y2="18" />
-      </svg>
+    <img src={menuImg} alt="" className="absolute right-[-10px] top-1/2 w-[150px] h-[150px] object-contain pointer-events-none opacity-90" style={{ transform: 'translate(10%, -20%)' }} />
+
+    <div className="flex flex-col items-start relative z-10 w-full">
+      <div className="text-[17px] font-bold" style={{ color: '#1B1512' }}>Menu Items</div>
+      <div className="text-[13px] mt-[1px]" style={{ color: '#979797' }}>Last Week</div>
     </div>
 
-    <div className="flex flex-col items-start">
-      <div className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Menu Items</div>
-      <div className="text-[10px] mt-[1px]" style={{ color: 'var(--text-muted)' }}>Last Week</div>
+    <div className="flex items-baseline gap-2 mt-[18px] mb-2 relative z-10">
+      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#F56A27' }}>48</span>
+      <span className="text-[18px] font-medium" style={{ color: '#F56A27' }}>Items</span>
     </div>
 
-    <div className="flex flex-col justify-center mt-3 mb-3">
-      <span className="font-display text-[32px] font-bold leading-none tracking-tight" style={{ color: '#F56A27' }}>48</span>
-    </div>
-
-    <div className="w-full mt-auto pt-1 flex flex-col items-start gap-[6px]">
+    <div className="w-full mt-auto flex flex-col items-start gap-[8px] relative z-10">
       <span
-        className="text-[10px] font-bold px-[8px] py-[3px] rounded-[20px]"
-        style={{ background: 'rgba(245, 106, 39, 0.1)', color: '#F56A27' }}
+        className="text-[11px] font-medium px-[24px] py-[4px] rounded-[14px] border border-[#F56A27]"
+        style={{ background: 'rgba(245, 106, 39, 0.05)', color: '#F56A27' }}
       >
         6 hidden
       </span>
-      <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>
+      <span className="text-[12px] font-medium" style={{ color: '#979797' }}>
         +3 since last week
       </span>
     </div>
@@ -147,44 +134,39 @@ const MenuItemsCard: React.FC = () => (
 
 const ActiveStoresCard: React.FC = () => (
   <div
-    className="flex flex-col items-start rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all duration-[180ms] h-full"
+    className="flex flex-col items-start rounded-2xl p-5 cursor-pointer relative overflow-hidden transition-all duration-300 w-full min-h-[200px]"
     style={cardBase}
     {...cardHoverProps}
   >
-    <div className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 mb-3" style={{ background: 'rgba(27, 122, 109, 0.1)' }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B7A6D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-      </svg>
+    <img src={storeImg} alt="" className="absolute -right-[15px] top-[40%] w-[130px] h-[130px] object-contain pointer-events-none opacity-90" />
+
+    <div className="flex flex-col items-start relative z-10 w-full">
+      <div className="text-[17px] font-bold" style={{ color: '#1B1512' }}>Active Stores</div>
+      <div className="text-[13px] mt-[1px]" style={{ color: '#979797' }}>Last Week</div>
     </div>
 
-    <div className="flex flex-col items-start">
-      <div className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Active Stores</div>
-      <div className="text-[10px] mt-[1px]" style={{ color: 'var(--text-muted)' }}>Last Week</div>
+    <div className="flex items-baseline gap-2 mt-[18px] mb-2 relative z-10">
+      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>2</span>
+      <span className="text-[18px] font-medium" style={{ color: '#41735D' }}>stores</span>
     </div>
 
-    <div className="flex flex-col justify-center mt-3 mb-3">
-      <span className="font-display text-[32px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>2</span>
-    </div>
-
-    <div className="w-full mt-auto pt-1 flex flex-col items-start gap-[6px]">
-      <div className="flex flex-col items-start gap-[4px] w-full">
+    <div className="w-full mt-auto pt-1 flex flex-col items-start gap-[6px] relative z-10">
+      <div className="flex flex-col items-start gap-[6px] w-full">
         <div
-          className="flex items-center justify-around gap-[6px] text-[10px] font-semibold w-full max-w-[100px] py-[4px] rounded-[6px]"
-          style={{ background: 'rgba(65, 115, 93, 0.1)', color: '#41735D', border: '1px solid #41735D' }}
+          className="flex items-center gap-[8px] text-[11px] font-medium w-full max-w-[110px] py-[3px] px-[12px] rounded-[6px] border border-[#41735D]"
+          style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
         >
-          <span className="w-[5px] h-[5px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 5px #41735D' }} />
+          <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 2px #41735D' }} />
           Chennai
         </div>
         <div
-          className="flex items-center justify-around gap-[6px] text-[10px] font-semibold w-full max-w-[100px] py-[4px] rounded-[6px]"
-          style={{ background: 'rgba(65, 115, 93, 0.1)', color: '#41735D', border: '1px solid #41735D' }}
+          className="flex items-center gap-[8px] text-[11px] font-medium w-full max-w-[110px] py-[3px] px-[12px] rounded-[6px] border border-[#41735D]"
+          style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
         >
-          <span className="w-[5px] h-[5px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 5px #41735D' }} />
-          Bangalore
+          <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 2px #41735D' }} />
+          Banglore
         </div>
       </div>
-      <span className="text-[9px] font-medium" style={{ color: 'var(--text-muted)' }}>Online</span>
     </div>
   </div>
 );

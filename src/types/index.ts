@@ -82,3 +82,42 @@ export interface WeeklyVisit {
   bangalore: number;
   total: number;
 }
+
+// ─── Users & Permissions ───────────────────────────────────────────────────────
+export type RolePreset = 'Store Manager' | 'Content Editor' | 'Support Agent' | 'Custom';
+
+export interface PermissionSet {
+  create: boolean;
+  view: boolean;
+  edit: boolean;
+  delete: boolean;
+}
+
+export interface ModuleRow {
+  name: string;
+  perms: PermissionSet;
+  viewOnly?: boolean;
+}
+
+/** Serialisable permission module — no React nodes. Used in API payloads & UserData. */
+export interface ModulePerms {
+  id: string;
+  name: string;
+  iconBg: string;
+  rows: ModuleRow[];
+}
+
+export interface UserData {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  rolePreset: RolePreset;
+  avatarColor: string;
+  initials: string;
+  permissions: ModulePerms[];
+  status: 'active' | 'inactive' | 'pending';
+  lastActive: string;
+  isGoogle: boolean;
+  active: boolean;
+}

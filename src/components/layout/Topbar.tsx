@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ThunderboltOutlined } from '@ant-design/icons';
+import type { UserData } from '@/types';
 
 interface TopbarProps {
   breadcrumb?: string[];
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   onLogout: () => void;
+  user?: UserData | null;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -13,6 +15,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   sidebarOpen,
   onToggleSidebar,
   onLogout,
+  user,
 }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -22,6 +25,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  const currentUser = user;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -216,15 +221,15 @@ export const Topbar: React.FC<TopbarProps> = ({
               className="flex items-center justify-center rounded-full text-[10px] font-bold"
               style={{
                 width: 28, height: 28,
-                background: 'var(--orange)',
+                background: currentUser?.avatarColor || 'var(--orange)',
                 color: '#fff',
               }}
             >
-              FO
+              {currentUser?.initials || 'FO'}
             </div>
             <div className="hidden sm:block">
-              <div className="text-xs font-semibold text-white">Fuskit Owner</div>
-              <div className="text-[10px]" style={{ color: 'rgba(240,217,192,0.5)' }}>super admin</div>
+              <div className="text-xs font-semibold text-white">{currentUser?.name || 'Fuskit Owner'}</div>
+              <div className="text-[10px]" style={{ color: 'rgba(240,217,192,0.5)' }}>{currentUser?.email || 'super admin'}</div>
             </div>
             <svg
               viewBox="0 0 24 24"
