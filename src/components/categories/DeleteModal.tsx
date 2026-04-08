@@ -5,6 +5,7 @@ interface DeleteModalProps {
   categoryName: string;
   onClose: () => void;
   onConfirm: () => void;
+  loading?: boolean;
 }
 
 export const DeleteModal: React.FC<DeleteModalProps> = ({
@@ -12,6 +13,7 @@ export const DeleteModal: React.FC<DeleteModalProps> = ({
   categoryName,
   onClose,
   onConfirm,
+  loading = false,
 }) => {
   return (
     <div
@@ -80,21 +82,25 @@ export const DeleteModal: React.FC<DeleteModalProps> = ({
           </button>
           <button
             onClick={onConfirm}
-            className="flex-1 py-[10px] rounded-lg text-[13px] font-bold cursor-pointer transition-colors"
+            disabled={loading}
+            className="flex-1 flex items-center justify-center gap-2 py-[10px] rounded-lg text-[13px] font-bold cursor-pointer transition-colors"
             style={{
-              background: 'var(--red)',
+              background: loading ? '#c0392b' : 'var(--red)',
               border: 'none',
               color: '#fff',
               fontFamily: "'Open Sans', sans-serif",
+              opacity: loading ? 0.8 : 1,
+              cursor: loading ? 'not-allowed' : 'pointer',
             }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = '#a83030';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--red)';
-            }}
+            onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = '#a83030'; }}
+            onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLElement).style.background = 'var(--red)'; }}
           >
-            Yes, delete
+            {loading && (
+              <svg className="animate-spin" viewBox="0 0 24 24" style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+              </svg>
+            )}
+            {loading ? 'Deleting…' : 'Yes, delete'}
           </button>
         </div>
       </div>

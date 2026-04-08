@@ -1,7 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { CategoryCard } from '@/components/categories/CategoryCard';
 import { CategoryDrawer } from '@/components/categories/CategoryDrawer';
 import { DeleteModal } from '@/components/categories/DeleteModal';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
+import {
+  categoriesApi,
+  type CategoryDTO,
+  type CategoryMeta,
+} from '@/services/api';
 
 /* ─── Types ─── */
 export interface Category {
@@ -12,19 +19,8 @@ export interface Category {
   itemCount: number;
   type: string;
   visible: boolean;
+  displayOrder: number;
 }
-
-/* ─── Mock data matching the HTML reference ─── */
-const INITIAL_CATEGORIES: Category[] = [
-  { id: '1', name: 'Buns', emoji: '🥐', bgColor: '#FFF3E0', itemCount: 14, type: 'Veg + Non-veg', visible: true },
-  { id: '2', name: 'Drinks', emoji: '🥤', bgColor: '#E3F2FD', itemCount: 8, type: 'Veg', visible: true },
-  { id: '3', name: 'Bread Omelette', emoji: '🍳', bgColor: '#FFF8E1', itemCount: 6, type: 'Veg + Non-veg', visible: true },
-  { id: '4', name: 'Signatures', emoji: '⭐', bgColor: '#FCE4EC', itemCount: 6, type: 'Veg', visible: true },
-  { id: '5', name: 'Maggi', emoji: '🍜', bgColor: '#F3E5F5', itemCount: 4, type: 'Veg + Non-veg', visible: true },
-  { id: '6', name: 'Fusk Fries', emoji: '🍟', bgColor: '#FFFDE7', itemCount: 4, type: 'Veg', visible: true },
-  { id: '7', name: 'Fuscorns', emoji: '🍿', bgColor: '#E8F5E9', itemCount: 1, type: 'Veg', visible: true },
-  { id: '8', name: 'VJ Siddhu Spl', emoji: '🎬', bgColor: '#ECEFF1', itemCount: 2, type: 'Special collab', visible: false },
-];
 
 type FilterType = 'all' | 'visible' | 'hidden';
 type SortType = 'order' | 'name' | 'items' | 'recent';
@@ -73,10 +69,47 @@ const ClipboardIcon = () => (
   </svg>
 );
 
+/* ─── Default meta ─── */
+const DEFAULT_META: CategoryMeta = { total: 0, visible: 0, hidden: 0, totalItems: 0 };
+
+/* ─── Skeleton card for loading state ─── */
+const SkeletonCard = () => (
+  <div
+    className="rounded-[14px] overflow-hidden"
+    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
+  >
+    <div className="animate-pulse" style={{ height: 130, background: 'var(--bg-hover)' }} />
+    <div className="px-[14px] py-3">
+      <div className="animate-pulse rounded h-4 w-3/4 mb-2" style={{ background: 'var(--bg-hover)' }} />
+      <div className="animate-pulse rounded h-3 w-1/2" style={{ background: 'var(--bg-hover)' }} />
+    </div>
+    <div className="px-[14px] py-[10px]" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-card2)' }}>
+      <div className="animate-pulse rounded h-4 w-full" style={{ background: 'var(--bg-hover)' }} />
+    </div>
+  </div>
+);
+
+/* ─── DTO → local type mapper ─── */
+function toCategory(dto: CategoryDTO): Category {
+  return {
+    id: dto.id,
+    name: dto.name,
+    emoji: dto.emoji,
+    bgColor: dto.bgColor,
+    itemCount: dto.itemCount,
+    type: dto.type,
+    visible: dto.visible,
+    displayOrder: dto.displayOrder,
+  };
+}
 
 /* ─── Main Page ─── */
 export const CategoriesPage: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [meta, setMeta] = useState<CategoryMeta>(DEFAULT_META);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortType>('order');
@@ -89,39 +122,71 @@ export const CategoriesPage: React.FC = () => {
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  /* ── Derived data ── */
-  const stats = useMemo(() => {
-    const total = categories.length;
-    const visible = categories.filter(c => c.visible).length;
-    const hidden = categories.filter(c => !c.visible).length;
-    const totalItems = categories.reduce((s, c) => s + c.itemCount, 0);
-    return { total, visible, hidden, totalItems };
-  }, [categories]);
+  const { toasts, showToast, dismissToast } = useToast();
 
+  /* ── Fetch all categories on mount ── */
+  const fetchCategories = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await categoriesApi.list();
+      setCategories(res.data.map(toCategory));
+      setMeta(res.meta);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+
+  /* ── Client-side filter + sort (useMemo over loaded data) ── */
   const filteredCategories = useMemo(() => {
     let result = categories;
 
-    // Search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(c => c.name.toLowerCase().includes(q));
     }
 
-    // Filter
     if (filter === 'visible') result = result.filter(c => c.visible);
-    if (filter === 'hidden') result = result.filter(c => !c.visible);
+    if (filter === 'hidden')  result = result.filter(c => !c.visible);
 
-    // Sort
-    if (sortBy === 'name') result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === 'items') result = [...result].sort((a, b) => b.itemCount - a.itemCount);
+    if (sortBy === 'name')   result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === 'items')  result = [...result].sort((a, b) => b.itemCount - a.itemCount);
+    if (sortBy === 'recent') result = [...result]; // already sorted by createdAt from API for 'recent'
+    // 'order' → default displayOrder from API
 
     return result;
   }, [categories, searchQuery, filter, sortBy]);
 
-  /* ── Handlers ── */
-  const handleToggleVisibility = (id: string) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, visible: !c.visible } : c));
+  /* ── Action handlers ── */
+  const handleToggleVisibility = async (id: string) => {
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return;
+    const newVisible = !cat.visible;
+    // Optimistic update
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, visible: newVisible } : c));
+    setMeta(prev => ({
+      ...prev,
+      visible: newVisible ? prev.visible + 1 : prev.visible - 1,
+      hidden:  newVisible ? prev.hidden - 1  : prev.hidden + 1,
+    }));
+    try {
+      await categoriesApi.update(id, { visible: newVisible });
+    } catch {
+      // Revert on failure
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, visible: !newVisible } : c));
+      setMeta(prev => ({
+        ...prev,
+        visible: newVisible ? prev.visible - 1 : prev.visible + 1,
+        hidden:  newVisible ? prev.hidden + 1  : prev.hidden - 1,
+      }));
+      showToast('Failed to update visibility', 'error');
+    }
   };
 
   const handleEdit = (category: Category) => {
@@ -141,34 +206,69 @@ export const CategoriesPage: React.FC = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (deletingCategory) {
+  const handleConfirmDelete = async () => {
+    if (!deletingCategory) return;
+    setDeleteLoading(true);
+    try {
+      await categoriesApi.delete(deletingCategory.id);
       setCategories(prev => prev.filter(c => c.id !== deletingCategory.id));
+      setMeta(prev => ({
+        ...prev,
+        total: prev.total - 1,
+        visible: deletingCategory.visible ? prev.visible - 1 : prev.visible,
+        hidden:  !deletingCategory.visible ? prev.hidden - 1 : prev.hidden,
+      }));
+      showToast(`"${deletingCategory.name}" deleted`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete category', 'error');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteModalOpen(false);
+      setDeletingCategory(null);
     }
-    setDeleteModalOpen(false);
-    setDeletingCategory(null);
   };
 
-  const handleSaveCategory = (data: { name: string; emoji: string; visible: boolean; order: number }) => {
+  const handleSaveCategory = async (data: { name: string; emoji: string; visible: boolean; order: number }) => {
     if (drawerMode === 'edit' && editingCategory) {
-      setCategories(prev =>
-        prev.map(c => c.id === editingCategory.id ? { ...c, name: data.name, emoji: data.emoji, visible: data.visible } : c)
-      );
+      try {
+        const res = await categoriesApi.update(editingCategory.id, {
+          name: data.name,
+          emoji: data.emoji,
+          visible: data.visible,
+          displayOrder: data.order,
+        });
+        const updated = toCategory(res.data);
+        setCategories(prev => prev.map(c => c.id === editingCategory.id ? updated : c));
+        showToast(`"${updated.name}" updated`, 'success');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to update category', 'error');
+      }
     } else {
-      const newCat: Category = {
-        id: String(Date.now()),
-        name: data.name,
-        emoji: data.emoji,
-        bgColor: ['#FFF3E0', '#E3F2FD', '#FFF8E1', '#FCE4EC', '#F3E5F5', '#FFFDE7', '#E8F5E9'][Math.floor(Math.random() * 7)],
-        itemCount: 0,
-        type: 'Veg',
-        visible: data.visible,
-      };
-      setCategories(prev => [...prev, newCat]);
+      try {
+        const res = await categoriesApi.create({
+          name: data.name,
+          emoji: data.emoji,
+          visible: data.visible,
+          displayOrder: data.order,
+          type: 'Veg',
+        });
+        const created = toCategory(res.data);
+        setCategories(prev => [...prev, created]);
+        setMeta(prev => ({
+          ...prev,
+          total: prev.total + 1,
+          visible: created.visible ? prev.visible + 1 : prev.visible,
+          hidden:  !created.visible ? prev.hidden + 1 : prev.hidden,
+        }));
+        showToast(`"${created.name}" created`, 'success');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to create category', 'error');
+      }
     }
     setDrawerOpen(false);
   };
 
+  /* ── Render ── */
   return (
     <div className="flex flex-col gap-3 md:gap-4 p-3 md:p-5 md:px-6 bg-[#F7F3EE] min-h-full rounded-xl">
 
@@ -185,65 +285,55 @@ export const CategoriesPage: React.FC = () => {
         <div className="flex items-center gap-[10px]">
           <button
             className="flex items-center gap-[6px] px-[14px] py-[9px] rounded-lg text-xs cursor-pointer transition-all"
-            style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-secondary)',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-            }}
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', boxShadow: 'var(--shadow-sm)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
           >
-            <ReorderIcon />
-            Reorder
+            <ReorderIcon /> Reorder
           </button>
           <button
             onClick={handleAdd}
             className="flex items-center gap-[6px] px-[18px] py-[9px] rounded-lg text-xs font-bold cursor-pointer transition-all whitespace-nowrap"
-            style={{
-              background: 'var(--orange)',
-              border: 'none',
-              color: '#fff',
-              boxShadow: '0 2px 8px rgba(212,114,42,0.3)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--orange-dim)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(212,114,42,0.4)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'var(--orange)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 8px rgba(212,114,42,0.3)';
-            }}
+            style={{ background: 'var(--orange)', border: 'none', color: '#fff', boxShadow: '0 2px 8px rgba(212,114,42,0.3)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--orange-dim)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--orange)'; }}
           >
-            <PlusIcon />
-            Add Category
+            <PlusIcon /> Add Category
           </button>
         </div>
       </div>
 
       {/* ── Stats Strip ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-[10px]">
-        <StatCard icon={<ListIcon />} iconClass="ssi-orange" value={stats.total} label="Total categories" />
-        <StatCard icon={<EyeIcon />} iconClass="ssi-green" value={stats.visible} label="Visible on site" />
-        <StatCard icon={<EyeOffIcon />} iconClass="ssi-red" value={stats.hidden} label="Hidden" />
-        <StatCard icon={<ClipboardIcon />} iconClass="ssi-blue" value={stats.totalItems} label="Total items across all" />
+        <StatCard icon={<ListIcon />} iconClass="ssi-orange" value={meta.total} label="Total categories" />
+        <StatCard icon={<EyeIcon />} iconClass="ssi-green" value={meta.visible} label="Visible on site" />
+        <StatCard icon={<EyeOffIcon />} iconClass="ssi-red" value={meta.hidden} label="Hidden" />
+        <StatCard icon={<ClipboardIcon />} iconClass="ssi-blue" value={meta.totalItems} label="Total items across all" />
       </div>
+
+      {/* ── Error Banner ── */}
+      {error && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
+          style={{ background: 'var(--red-bg)', border: '1px solid var(--red)', color: 'var(--red)' }}
+        >
+          <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={fetchCategories}
+            className="text-xs font-semibold underline cursor-pointer"
+            style={{ background: 'none', border: 'none', color: 'inherit' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ── Toolbar ── */}
       <div className="flex flex-wrap items-center gap-[10px]">
         <div
           className="flex items-center gap-2 flex-1 max-w-[320px] px-3 py-[8px] rounded-lg transition-colors"
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
         >
           <span style={{ color: 'var(--text-muted)' }}><SearchIcon /></span>
           <input
@@ -258,9 +348,9 @@ export const CategoriesPage: React.FC = () => {
 
         {/* Filter buttons */}
         {([
-          { key: 'all', label: 'All', icon: <EyeIcon /> },
+          { key: 'all',     label: 'All',     icon: <EyeIcon /> },
           { key: 'visible', label: 'Visible', icon: <EyeIcon /> },
-          { key: 'hidden', label: 'Hidden', icon: <EyeOffIcon /> },
+          { key: 'hidden',  label: 'Hidden',  icon: <EyeOffIcon /> },
         ] as const).map(f => (
           <button
             key={f.key}
@@ -282,13 +372,7 @@ export const CategoriesPage: React.FC = () => {
           value={sortBy}
           onChange={e => setSortBy(e.target.value as SortType)}
           className="px-3 py-[8px] rounded-lg text-xs cursor-pointer outline-none"
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-secondary)',
-            boxShadow: 'var(--shadow-sm)',
-            fontFamily: "'Open Sans', sans-serif",
-          }}
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', boxShadow: 'var(--shadow-sm)', fontFamily: "'Open Sans', sans-serif" }}
         >
           <option value="order">Sort: Display order</option>
           <option value="name">Sort: Name A–Z</option>
@@ -298,17 +382,18 @@ export const CategoriesPage: React.FC = () => {
       </div>
 
       {/* ── Section Label ── */}
-      <div
-        className="text-[11px] font-bold uppercase tracking-[.08em] mt-1"
-        style={{ color: 'var(--text-muted)' }}
-      >
-        {filter === 'all' ? `All categories (${filteredCategories.length})` :
-          filter === 'visible' ? `Visible categories (${filteredCategories.length})` :
-            `Hidden categories (${filteredCategories.length})`}
+      <div className="text-[11px] font-bold uppercase tracking-[.08em] mt-1" style={{ color: 'var(--text-muted)' }}>
+        {filter === 'all'     ? `All categories (${filteredCategories.length})` :
+         filter === 'visible' ? `Visible categories (${filteredCategories.length})` :
+                                `Hidden categories (${filteredCategories.length})`}
       </div>
 
       {/* ── Category Grid ── */}
-      {filteredCategories.length > 0 ? (
+      {loading ? (
+        <div className="grid gap-[14px]" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
+          {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : filteredCategories.length > 0 ? (
         <div className="grid gap-[14px]" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
           {filteredCategories.map((cat, i) => (
             <CategoryCard
@@ -348,7 +433,11 @@ export const CategoriesPage: React.FC = () => {
         categoryName={deletingCategory?.name || ''}
         onClose={() => { setDeleteModalOpen(false); setDeletingCategory(null); }}
         onConfirm={handleConfirmDelete}
+        loading={deleteLoading}
       />
+
+      {/* ── Toasts ── */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };
@@ -364,9 +453,9 @@ interface StatCardProps {
 
 const iconColors: Record<string, { bg: string; color: string }> = {
   'ssi-orange': { bg: 'var(--orange-light)', color: 'var(--orange)' },
-  'ssi-green': { bg: 'var(--green-bg)', color: 'var(--green)' },
-  'ssi-red': { bg: 'var(--red-bg)', color: 'var(--red)' },
-  'ssi-blue': { bg: 'var(--blue-bg)', color: 'var(--blue)' },
+  'ssi-green':  { bg: 'var(--green-bg)',     color: 'var(--green)'  },
+  'ssi-red':    { bg: 'var(--red-bg)',        color: 'var(--red)'    },
+  'ssi-blue':   { bg: 'var(--blue-bg)',       color: 'var(--blue)'   },
 };
 
 const StatCard: React.FC<StatCardProps> = ({ icon, iconClass, value, label }) => {
@@ -374,11 +463,7 @@ const StatCard: React.FC<StatCardProps> = ({ icon, iconClass, value, label }) =>
   return (
     <div
       className="flex items-center gap-[10px] px-4 py-3 rounded-[10px]"
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
+      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
     >
       <div
         className="flex items-center justify-center rounded-lg flex-shrink-0"

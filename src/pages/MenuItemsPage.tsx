@@ -1,7 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { ProductCard } from '@/components/menuItems/ProductCard';
 import { ProductDrawer } from '@/components/menuItems/ProductDrawer';
 import { DeleteModal } from '@/components/categories/DeleteModal';
+import { ToastContainer } from '@/components/ui/Toast';
+import { useToast } from '@/hooks/useToast';
+import {
+  menuItemsApi,
+  categoriesApi,
+  storesApi,
+  type MenuItemDTO,
+  type MenuItemMeta,
+  type CategoryDTO,
+} from '@/services/api';
 
 /* ─── Types ─── */
 export interface Product {
@@ -10,7 +20,8 @@ export interface Product {
   description: string;
   emoji: string;
   bgColor: string;
-  category: string;
+  category: string;      // categoryName — used by UI dropdowns + filters
+  categoryId: string;    // needed to send to API on create/update
   price: number;
   oldPrice?: number;
   discountPercent?: number;
@@ -18,78 +29,35 @@ export interface Product {
   visible: boolean;
   stores: string[];
   storeSpecial?: string;
-  badges: string[]; // 'bestseller' | 'new' | 'trending' | 'seasonal'
+  badges: string[];
 }
 
-/* ─── Mock data matching the HTML reference ─── */
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: '1', name: 'Bun Butter Jam', description: 'Classic butter bun with a generous spread of jam. A Fusk-it favourite since day one.',
-    emoji: '🥐', bgColor: '#FFF3E0', category: 'Buns', price: 89, isVeg: true, visible: true,
-    stores: ['Chennai', 'Bangalore'], badges: ['bestseller'],
-  },
-  {
-    id: '2', name: 'Kozhi Butter Bun', description: 'Juicy chicken filling in a fluffy butter bun. Non-veg special.',
-    emoji: '🍗', bgColor: '#FBE9E7', category: 'Buns', price: 179, oldPrice: 199, discountPercent: 10,
-    isVeg: false, visible: true, stores: ['Chennai'], storeSpecial: 'Chennai Spl', badges: [],
-  },
-  {
-    id: '3', name: 'OG Malaysian Milo', description: 'The iconic Malaysian Milo — thick, rich, and ridiculously good.',
-    emoji: '🥤', bgColor: '#E3F2FD', category: 'Drinks', price: 199, isVeg: true, visible: true,
-    stores: ['Chennai', 'Bangalore'], badges: ['new', 'bestseller'],
-  },
-  {
-    id: '4', name: 'Fusk Spl Fries', description: 'The ultimate Fusk-it loaded fries experience. Add-on available.',
-    emoji: '🍟', bgColor: '#FFFDE7', category: 'Fusk Fries', price: 169, oldPrice: 199, discountPercent: 15,
-    isVeg: true, visible: true, stores: ['Chennai', 'Bangalore'], badges: [],
-  },
-  {
-    id: '5', name: 'Chocolate Bhajji', description: 'A collab special — currently hidden from the site.',
-    emoji: '🍫', bgColor: '#ECEFF1', category: 'VJ Siddhu Spl', price: 89, isVeg: true, visible: false,
-    stores: ['Chennai'], storeSpecial: 'VJ Siddhu Spl', badges: [],
-  },
-  {
-    id: '6', name: 'Gulabjamun + Ice Cream', description: 'Warm gulabjamun paired with chilled ice cream. The crowd favourite.',
-    emoji: '🍨', bgColor: '#FCE4EC', category: 'Signatures', price: 199, isVeg: true, visible: true,
-    stores: ['Chennai', 'Bangalore'], badges: ['bestseller'],
-  },
-  {
-    id: '7', name: 'Egg Omelette Classic', description: 'Classic fluffy omelette with bread on the side.',
-    emoji: '🍳', bgColor: '#FFF8E1', category: 'Bread Omelette', price: 79, isVeg: false, visible: true,
-    stores: ['Chennai', 'Bangalore'], badges: [],
-  },
-  {
-    id: '8', name: 'Maggi Masala', description: 'The OG Maggi prepared with our signature masala blend.',
-    emoji: '🍜', bgColor: '#F3E5F5', category: 'Maggi', price: 99, isVeg: true, visible: true,
-    stores: ['Chennai', 'Bangalore'], badges: ['bestseller'],
-  },
-  {
-    id: '9', name: 'Cheese Fries', description: 'Loaded fries with extra cheese topping.',
-    emoji: '🧀', bgColor: '#FFFDE7', category: 'Fusk Fries', price: 149, isVeg: true, visible: true,
-    stores: ['Chennai', 'Bangalore'], badges: ['new'],
-  },
-  {
-    id: '10', name: 'Choco Lava Bun', description: 'Warm bun with melting chocolate center. Irresistible.',
-    emoji: '🍫', bgColor: '#D7CCC8', category: 'Buns', price: 129, isVeg: true, visible: true,
-    stores: ['Chennai'], badges: ['trending'],
-  },
-  {
-    id: '11', name: 'Cold Coffee', description: 'Thick, creamy cold coffee to beat the heat.',
-    emoji: '☕', bgColor: '#EFEBE9', category: 'Drinks', price: 149, isVeg: true, visible: true,
-    stores: ['Chennai', 'Bangalore'], badges: [],
-  },
-  {
-    id: '12', name: 'VJ Siddhu Spl Bun', description: 'A special limited collab bun — celebrity endorsed.',
-    emoji: '🎬', bgColor: '#ECEFF1', category: 'VJ Siddhu Spl', price: 149, isVeg: false, visible: false,
-    stores: ['Chennai'], storeSpecial: 'VJ Siddhu Spl', badges: [],
-  },
-];
-
-const CATEGORIES = ['Buns', 'Drinks', 'Bread Omelette', 'Signatures', 'Maggi', 'Fusk Fries', 'Fuscorns', 'VJ Siddhu Spl'];
-const STORES = ['Chennai', 'Bangalore'];
+/* ─── DTO → local type mapper ─── */
+function toProduct(dto: MenuItemDTO): Product {
+  return {
+    id: dto.id,
+    name: dto.name,
+    description: dto.description ?? '',
+    emoji: dto.emoji,
+    bgColor: dto.bgColor,
+    category: dto.categoryName,
+    categoryId: dto.categoryId,
+    price: dto.price,
+    oldPrice: dto.oldPrice ?? undefined,
+    discountPercent: dto.discountPercent ?? undefined,
+    isVeg: dto.isVeg,
+    visible: dto.visible,
+    stores: dto.stores,
+    storeSpecial: dto.storeSpecial ?? undefined,
+    badges: dto.badges,
+  };
+}
 
 type FilterType = 'all' | 'visible' | 'bestseller' | 'veg';
 type SortType = 'default' | 'price-low' | 'price-high' | 'name' | 'recent';
+
+/* ─── Default meta ─── */
+const DEFAULT_META: MenuItemMeta = { total: 0, visible: 0, hidden: 0, bestsellers: 0, discounted: 0 };
 
 /* ─── SVG Icons ─── */
 const PlusIcon = () => (
@@ -169,36 +137,75 @@ const TagIcon16 = () => (
   </svg>
 );
 
+/* ─── Skeleton card ─── */
+const SkeletonCard = () => (
+  <div
+    className="rounded-[14px] overflow-hidden"
+    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}
+  >
+    <div className="animate-pulse" style={{ height: 140, background: 'var(--bg-hover)' }} />
+    <div className="px-[14px] py-3">
+      <div className="animate-pulse rounded h-3 w-3/4 mb-2" style={{ background: 'var(--bg-hover)' }} />
+      <div className="animate-pulse rounded h-3 w-1/2 mb-2" style={{ background: 'var(--bg-hover)' }} />
+      <div className="animate-pulse rounded h-4 w-1/3" style={{ background: 'var(--bg-hover)' }} />
+    </div>
+  </div>
+);
 
 /* ─── Main Page ─── */
 export const MenuItemsPage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts]           = useState<Product[]>([]);
+  const [meta, setMeta]                   = useState<MenuItemMeta>(DEFAULT_META);
+  const [categories, setCategories]       = useState<CategoryDTO[]>([]);
+  const [storeNames, setStoreNames]       = useState<string[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState<string | null>(null);
+  const [exporting, setExporting]         = useState(false);
+
+  const [searchQuery, setSearchQuery]     = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [storeFilter, setStoreFilter] = useState('all');
-  const [filter, setFilter] = useState<FilterType>('all');
-  const [sortBy, setSortBy] = useState<SortType>('default');
+  const [storeFilter, setStoreFilter]     = useState('all');
+  const [filter, setFilter]               = useState<FilterType>('all');
+  const [sortBy, setSortBy]               = useState<SortType>('default');
 
   // Drawer
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState<'add' | 'edit'>('add');
+  const [drawerOpen, setDrawerOpen]       = useState(false);
+  const [drawerMode, setDrawerMode]       = useState<'add' | 'edit'>('add');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   // Delete modal
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen]   = useState(false);
+  const [deletingProduct, setDeletingProduct]   = useState<Product | null>(null);
+  const [deleteLoading, setDeleteLoading]       = useState(false);
 
-  /* ── Computed stats ── */
-  const stats = useMemo(() => {
-    const total = products.length;
-    const visible = products.filter(p => p.visible).length;
-    const hidden = products.filter(p => !p.visible).length;
-    const bestsellers = products.filter(p => p.badges.includes('bestseller')).length;
-    const discounted = products.filter(p => p.discountPercent && p.discountPercent > 0).length;
-    return { total, visible, hidden, bestsellers, discounted };
-  }, [products]);
+  const { toasts, showToast, dismissToast } = useToast();
 
-  /* ── Filtered / sorted products ── */
+  /* ── Fetch all data on mount ── */
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [itemsRes, catsRes, storesRes] = await Promise.all([
+        menuItemsApi.list(),
+        categoriesApi.list(),
+        storesApi.list(),
+      ]);
+      setProducts(itemsRes.data.map(toProduct));
+      setMeta(itemsRes.meta);
+      setCategories(catsRes.data);
+      // storesApi may return { data: [...] } or just an array — handle both
+      const storeData = storesRes?.data ?? (storesRes as unknown as { name: string }[]);
+      setStoreNames(Array.isArray(storeData) ? storeData.map((s: { name: string }) => s.name) : ['Chennai', 'Bangalore']);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load menu items');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  /* ── Client-side filter + sort ── */
   const filteredProducts = useMemo(() => {
     let result = products;
 
@@ -208,22 +215,32 @@ export const MenuItemsPage: React.FC = () => {
     }
 
     if (categoryFilter !== 'all') result = result.filter(p => p.category === categoryFilter);
-    if (storeFilter !== 'all') result = result.filter(p => p.stores.includes(storeFilter));
+    if (storeFilter !== 'all')    result = result.filter(p => p.stores.includes(storeFilter));
 
-    if (filter === 'visible') result = result.filter(p => p.visible);
+    if (filter === 'visible')    result = result.filter(p => p.visible);
     if (filter === 'bestseller') result = result.filter(p => p.badges.includes('bestseller'));
-    if (filter === 'veg') result = result.filter(p => p.isVeg);
+    if (filter === 'veg')        result = result.filter(p => p.isVeg);
 
-    if (sortBy === 'price-low') result = [...result].sort((a, b) => a.price - b.price);
+    if (sortBy === 'price-low')  result = [...result].sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') result = [...result].sort((a, b) => b.price - a.price);
-    if (sortBy === 'name') result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === 'name')       result = [...result].sort((a, b) => a.name.localeCompare(b.name));
 
     return result;
   }, [products, searchQuery, categoryFilter, storeFilter, filter, sortBy]);
 
   /* ── Handlers ── */
-  const handleToggleVisibility = (id: string) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, visible: !p.visible } : p));
+  const handleToggleVisibility = async (id: string) => {
+    const prod = products.find(p => p.id === id);
+    if (!prod) return;
+    const newVisible = !prod.visible;
+    // Optimistic update
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, visible: newVisible } : p));
+    try {
+      await menuItemsApi.update(id, { visible: newVisible });
+    } catch {
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, visible: !newVisible } : p));
+      showToast('Failed to update visibility', 'error');
+    }
   };
 
   const handleEdit = (product: Product) => {
@@ -243,40 +260,112 @@ export const MenuItemsPage: React.FC = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (deletingProduct) {
+  const handleConfirmDelete = async () => {
+    if (!deletingProduct) return;
+    setDeleteLoading(true);
+    try {
+      await menuItemsApi.delete(deletingProduct.id);
       setProducts(prev => prev.filter(p => p.id !== deletingProduct.id));
+      setMeta(prev => ({
+        ...prev,
+        total: prev.total - 1,
+        visible: deletingProduct.visible ? prev.visible - 1 : prev.visible,
+        hidden:  !deletingProduct.visible ? prev.hidden - 1 : prev.hidden,
+        bestsellers: deletingProduct.badges.includes('bestseller') ? prev.bestsellers - 1 : prev.bestsellers,
+        discounted:  (deletingProduct.discountPercent ?? 0) > 0 ? prev.discounted - 1 : prev.discounted,
+      }));
+      showToast(`"${deletingProduct.name}" deleted`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete item', 'error');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteModalOpen(false);
+      setDeletingProduct(null);
     }
-    setDeleteModalOpen(false);
-    setDeletingProduct(null);
   };
 
-  const handleSaveProduct = (data: Partial<Product>) => {
+  const handleSaveProduct = async (data: Partial<Product>) => {
+    // Resolve category name → ID
+    const categoryId =
+      categories.find(c => c.name === data.category)?.id ?? editingProduct?.categoryId ?? '';
+
     if (drawerMode === 'edit' && editingProduct) {
-      setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...data } : p));
+      try {
+        const res = await menuItemsApi.update(editingProduct.id, {
+          name:            data.name,
+          description:     data.description,
+          emoji:           data.emoji,
+          categoryId:      categoryId || undefined,
+          price:           data.price,
+          oldPrice:        data.oldPrice,
+          discountPercent: data.discountPercent,
+          isVeg:           data.isVeg,
+          visible:         data.visible,
+          stores:          data.stores,
+          storeSpecial:    data.storeSpecial,
+          badges:          data.badges,
+        });
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? toProduct(res.data) : p));
+        showToast(`"${res.data.name}" updated`, 'success');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to update item', 'error');
+      }
     } else {
+      if (!categoryId) {
+        showToast('Please select a category', 'warning');
+        return;
+      }
       const bgColors = ['#FFF3E0', '#E3F2FD', '#FFF8E1', '#FCE4EC', '#F3E5F5', '#FFFDE7', '#E8F5E9', '#FBE9E7'];
-      const newProd: Product = {
-        id: String(Date.now()),
-        name: data.name || 'New Product',
-        description: data.description || '',
-        emoji: data.emoji || '🍽️',
-        bgColor: bgColors[Math.floor(Math.random() * bgColors.length)],
-        category: data.category || 'Buns',
-        price: data.price || 0,
-        oldPrice: data.oldPrice,
-        discountPercent: data.discountPercent,
-        isVeg: data.isVeg ?? true,
-        visible: data.visible ?? true,
-        stores: data.stores || ['Chennai', 'Bangalore'],
-        storeSpecial: data.storeSpecial,
-        badges: data.badges || [],
-      };
-      setProducts(prev => [...prev, newProd]);
+      try {
+        const res = await menuItemsApi.create({
+          name:            data.name || 'New Product',
+          description:     data.description,
+          emoji:           data.emoji || '🍽️',
+          bgColor:         bgColors[Math.floor(Math.random() * bgColors.length)],
+          categoryId,
+          price:           data.price || 0,
+          oldPrice:        data.oldPrice,
+          discountPercent: data.discountPercent,
+          isVeg:           data.isVeg ?? true,
+          visible:         data.visible ?? true,
+          stores:          data.stores || [],
+          storeSpecial:    data.storeSpecial,
+          badges:          data.badges || [],
+        });
+        const created = toProduct(res.data);
+        setProducts(prev => [...prev, created]);
+        setMeta(prev => ({
+          ...prev,
+          total: prev.total + 1,
+          visible: created.visible ? prev.visible + 1 : prev.visible,
+          hidden:  !created.visible ? prev.hidden + 1 : prev.hidden,
+          bestsellers: created.badges.includes('bestseller') ? prev.bestsellers + 1 : prev.bestsellers,
+          discounted:  (created.discountPercent ?? 0) > 0 ? prev.discounted + 1 : prev.discounted,
+        }));
+        showToast(`"${created.name}" created`, 'success');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to create item', 'error');
+      }
     }
     setDrawerOpen(false);
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await menuItemsApi.export();
+      showToast('Export downloaded', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Export failed', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  /* ── Category names for dropdown ── */
+  const categoryNames = categories.map(c => c.name);
+
+  /* ── Render ── */
   return (
     <div className="flex flex-col gap-3 md:gap-[14px] p-3 md:p-5 md:px-6 bg-[#F7F3EE] min-h-full rounded-xl">
 
@@ -292,15 +381,20 @@ export const MenuItemsPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-[10px]">
           <button
+            onClick={handleExport}
+            disabled={exporting}
             className="flex items-center gap-[6px] px-[14px] py-[9px] rounded-lg text-xs cursor-pointer transition-all"
             style={{
               background: 'var(--bg-card)', border: '1px solid var(--border)',
               color: 'var(--text-secondary)', boxShadow: 'var(--shadow-sm)',
+              opacity: exporting ? 0.7 : 1,
+              cursor: exporting ? 'not-allowed' : 'pointer',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
+            onMouseEnter={e => { if (!exporting) { (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
           >
-            <ExportIcon /> Export
+            <ExportIcon />
+            {exporting ? 'Exporting…' : 'Export'}
           </button>
           <button
             onClick={handleAdd}
@@ -316,12 +410,30 @@ export const MenuItemsPage: React.FC = () => {
 
       {/* ── Stats Strip (5 cards) ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-[10px]">
-        <StatCard icon={<ClipboardIcon />} iconBg="var(--orange-light)" iconColor="var(--orange)" value={stats.total} label="Total products" />
-        <StatCard icon={<EyeIcon16 />} iconBg="var(--green-bg)" iconColor="var(--green)" value={stats.visible} label="Visible" />
-        <StatCard icon={<EyeOffIcon16 />} iconBg="var(--red-bg)" iconColor="var(--red)" value={stats.hidden} label="Hidden" />
-        <StatCard icon={<StarIcon16 />} iconBg="var(--blue-bg)" iconColor="var(--blue)" value={stats.bestsellers} label="Bestsellers" />
-        <StatCard icon={<TagIcon16 />} iconBg="var(--purple-bg)" iconColor="var(--purple)" value={stats.discounted} label="Discounted" />
+        <StatCard icon={<ClipboardIcon />} iconBg="var(--orange-light)" iconColor="var(--orange)" value={meta.total}       label="Total products" />
+        <StatCard icon={<EyeIcon16 />}     iconBg="var(--green-bg)"    iconColor="var(--green)"   value={meta.visible}     label="Visible"        />
+        <StatCard icon={<EyeOffIcon16 />}  iconBg="var(--red-bg)"      iconColor="var(--red)"     value={meta.hidden}      label="Hidden"         />
+        <StatCard icon={<StarIcon16 />}    iconBg="var(--blue-bg)"     iconColor="var(--blue)"    value={meta.bestsellers} label="Bestsellers"    />
+        <StatCard icon={<TagIcon16 />}     iconBg="var(--purple-bg)"   iconColor="var(--purple)"  value={meta.discounted}  label="Discounted"     />
       </div>
+
+      {/* ── Error Banner ── */}
+      {error && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
+          style={{ background: 'var(--red-bg)', border: '1px solid var(--red)', color: 'var(--red)' }}
+        >
+          <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={fetchAll}
+            className="text-xs font-semibold underline cursor-pointer"
+            style={{ background: 'none', border: 'none', color: 'inherit' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* ── Toolbar ── */}
       <div className="flex flex-wrap items-center gap-2">
@@ -339,32 +451,32 @@ export const MenuItemsPage: React.FC = () => {
           />
         </div>
 
-        {/* Category select */}
+        {/* Category select — live from API */}
         <select
           value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}
           className="px-3 py-[8px] rounded-lg text-xs cursor-pointer outline-none"
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', boxShadow: 'var(--shadow-sm)', fontFamily: "'Open Sans', sans-serif" }}
         >
           <option value="all">All categories</option>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          {categoryNames.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
 
-        {/* Store select */}
+        {/* Store select — live from API */}
         <select
           value={storeFilter} onChange={e => setStoreFilter(e.target.value)}
           className="px-3 py-[8px] rounded-lg text-xs cursor-pointer outline-none"
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)', boxShadow: 'var(--shadow-sm)', fontFamily: "'Open Sans', sans-serif" }}
         >
           <option value="all">All stores</option>
-          {STORES.map(s => <option key={s} value={s}>{s}</option>)}
+          {storeNames.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
 
         {/* Filter pills */}
         {([
-          { key: 'all' as FilterType, label: 'All', icon: <AllIcon /> },
-          { key: 'visible' as FilterType, label: 'Visible', icon: <EyeIcon /> },
+          { key: 'all'        as FilterType, label: 'All',         icon: <AllIcon />  },
+          { key: 'visible'    as FilterType, label: 'Visible',     icon: <EyeIcon />  },
           { key: 'bestseller' as FilterType, label: 'Bestsellers', icon: <StarIcon /> },
-          { key: 'veg' as FilterType, label: 'Veg only', icon: <VegIcon /> },
+          { key: 'veg'        as FilterType, label: 'Veg only',    icon: <VegIcon />  },
         ]).map(f => (
           <button
             key={f.key}
@@ -401,7 +513,11 @@ export const MenuItemsPage: React.FC = () => {
       </div>
 
       {/* ── Product Grid ── */}
-      {filteredProducts.length > 0 ? (
+      {loading ? (
+        <div className="grid gap-[14px]" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+          {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : filteredProducts.length > 0 ? (
         <div className="grid gap-[14px]" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
           {filteredProducts.map((prod, i) => (
             <ProductCard
@@ -431,8 +547,8 @@ export const MenuItemsPage: React.FC = () => {
         open={drawerOpen}
         mode={drawerMode}
         product={editingProduct}
-        categories={CATEGORIES}
-        stores={STORES}
+        categories={categoryNames}
+        stores={storeNames}
         onClose={() => setDrawerOpen(false)}
         onSave={handleSaveProduct}
       />
@@ -443,13 +559,17 @@ export const MenuItemsPage: React.FC = () => {
         categoryName={deletingProduct?.name || ''}
         onClose={() => { setDeleteModalOpen(false); setDeletingProduct(null); }}
         onConfirm={handleConfirmDelete}
+        loading={deleteLoading}
       />
+
+      {/* ── Toasts ── */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 };
 
 
-/* ─── Stat Card (reused) ─── */
+/* ─── Stat Card ─── */
 interface StatCardProps {
   icon: React.ReactNode;
   iconBg: string;
