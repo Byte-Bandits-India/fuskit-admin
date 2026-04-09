@@ -1,75 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Toggle } from '@/components/ui/Toggle';
 import { BannerDrawer } from '@/components/banners/BannerDrawer';
 import { DeleteModal } from '@/components/categories/DeleteModal';
 
 /* ─── Types ─── */
-export type BannerType = 'hero' | 'menu' | 'announcement' | 'popup';
-export type BannerStatus = 'active' | 'inactive' | 'scheduled' | 'expired';
+export type BannerType = BannerDTO['type'];
+export type BannerStatus = BannerDTO['status'];
+export type Banner = BannerDTO;
 
-export interface Banner {
-  id: string;
-  name: string;
-  type: BannerType;
-  status: BannerStatus;
-  emoji: string;
-  thumbBg: string;
-  title: string;
-  subtitle?: string;
-  ctaLabel?: string;
-  ctaLink?: string;
-  schedule: string;
-  enabled: boolean;
-  order: number;
-  altText?: string;
-}
-
-/* ─── Mock Data ─── */
-const INITIAL_BANNERS: Banner[] = [
-  {
-    id: '1', name: 'Homepage Hero — Buns Season', type: 'hero', status: 'active', emoji: '🥐', thumbBg: 'linear-gradient(135deg,#1C0F05,#3B2010)',
-    title: 'Fusk boring desserts.', subtitle: 'Bold buns, signature drinks & indulgent treats.', ctaLabel: 'Explore Menu →', ctaLink: '/menu/buns',
-    schedule: 'Live now · No end date', enabled: true, order: 1, altText: 'Fusk-it homepage hero — bold bun desserts Chennai'
-  },
-  {
-    id: '2', name: 'Now open in Bangalore!', type: 'announcement', status: 'active', emoji: '📢', thumbBg: '#E8F5E9',
-    title: 'Now open in Bangalore! Visit us on ECR, Chennai — Open everyday', schedule: 'Live now · No end date', enabled: true, order: 2
-  },
-  {
-    id: '3', name: 'Drinks Section Banner', type: 'menu', status: 'active', emoji: '🥤', thumbBg: '#E3F2FD',
-    title: 'Cool drinks, hot vibes', subtitle: 'Try our Malaysian Milo & more', ctaLabel: 'Order now', ctaLink: '/menu/drinks',
-    schedule: 'Live · Ends 30 Jun 2026', enabled: true, order: 3
-  },
-  {
-    id: '4', name: 'Summer Special Offer Popup', type: 'popup', status: 'scheduled', emoji: '🎉', thumbBg: 'var(--purple-bg)',
-    title: 'Summer Special!', subtitle: 'Get 20% off on all drinks this summer. Use code SUMMER20.', ctaLabel: 'Grab the deal →', ctaLink: '/menu',
-    schedule: 'Starts 1 Jun · Ends 30 Jun 2026', enabled: false, order: 4
-  },
-  {
-    id: '5', name: 'Fries Fest — Old Campaign', type: 'hero', status: 'inactive', emoji: '🍟', thumbBg: '#ECEFF1',
-    title: 'Fries Fest is here!', subtitle: 'Limited time loaded fries collection.', ctaLabel: 'See Fries', ctaLink: '/menu/fries',
-    schedule: 'Ended 1 Apr 2026', enabled: false, order: 5
-  },
-  {
-    id: '6', name: 'Buns Category Hero', type: 'menu', status: 'active', emoji: '🥐', thumbBg: '#FFF3E0',
-    title: 'Bun Butter Jam — our bestseller', subtitle: 'Try it before it sells out!', ctaLabel: 'View Buns', ctaLink: '/menu/buns',
-    schedule: 'Live now · No end date', enabled: true, order: 6
-  },
-  {
-    id: '7', name: 'Maggi Monday Offer', type: 'announcement', status: 'active', emoji: '🍜', thumbBg: '#F3E5F5',
-    title: '🍜 Maggi Mondays — Flat ₹79 every Monday!', schedule: 'Live now · No end date', enabled: true, order: 7
-  },
-  {
-    id: '8', name: 'New Store Popup', type: 'popup', status: 'scheduled', emoji: '🏪', thumbBg: 'var(--blue-bg)',
-    title: 'We\'re in Bangalore!', subtitle: 'Visit our brand new Bangalore location.', ctaLabel: 'Get Directions', ctaLink: '/stores/bangalore',
-    schedule: 'Starts 15 Apr 2026', enabled: false, order: 8
-  },
-  {
-    id: '9', name: 'Signatures Menu Banner', type: 'menu', status: 'expired', emoji: '⭐', thumbBg: '#FCE4EC',
-    title: 'Signatures Collection', ctaLabel: 'View Signatures', ctaLink: '/menu/signatures',
-    schedule: 'Expired 1 Mar 2026', enabled: false, order: 9
-  },
-];
+import { bannersApi, BannerDTO } from '@/services/api';
 
 const TYPE_COLORS: Record<BannerType, { accent: string; bg: string; color: string; label: string }> = {
   hero: { accent: 'var(--orange)', bg: 'var(--orange-light)', color: 'var(--orange)', label: 'Hero' },
@@ -122,11 +61,12 @@ const EyeIcon = () => (
 
 /* ─── Main Page ─── */
 export const BannerSettingsPage: React.FC = () => {
-  const [banners, setBanners] = useState<Banner[]>(INITIAL_BANNERS);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [meta, setMeta] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [selectedId, setSelectedId] = useState<string>('1');
+  const [selectedId, setSelectedId] = useState<string>('');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'add' | 'edit'>('add');
@@ -134,14 +74,32 @@ export const BannerSettingsPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingBanner, setDeletingBanner] = useState<Banner | null>(null);
 
+  const fetchBanners = async () => {
+    try {
+      const res = await bannersApi.list();
+      setBanners(res.data);
+      setMeta(res.meta);
+      if (res.data.length > 0 && !selectedId) {
+        setSelectedId(res.data[0].id);
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => {
+    fetchBanners();
+  }, []);
+
   /* Stats */
-  const stats = useMemo(() => ({
-    total: banners.length,
-    active: banners.filter(b => b.status === 'active').length,
-    scheduled: banners.filter(b => b.status === 'scheduled').length,
-    inactive: banners.filter(b => b.status === 'inactive' || b.status === 'expired').length,
-    types: new Set(banners.map(b => b.type)).size,
-  }), [banners]);
+  const stats = useMemo(() => {
+    if (meta) return meta;
+    return {
+      total: banners.length,
+      active: banners.filter(b => b.status === 'active').length,
+      scheduled: banners.filter(b => b.status === 'scheduled').length,
+      inactive: banners.filter(b => b.status === 'inactive' || b.status === 'expired').length,
+      types: new Set(banners.map(b => b.type)).size,
+    };
+  }, [banners, meta]);
 
   /* Filtered */
   const filtered = useMemo(() => {
@@ -162,25 +120,51 @@ export const BannerSettingsPage: React.FC = () => {
   }, [banners]);
 
   /* Handlers */
-  const handleToggle = (id: string) => setBanners(prev => prev.map(b => b.id === id ? { ...b, enabled: !b.enabled } : b));
+  const handleToggle = async (id: string) => {
+    const banner = banners.find(b => b.id === id);
+    if (!banner) return;
+    try {
+      await bannersApi.updatePartial(id, { enabled: !banner.enabled });
+      fetchBanners();
+    } catch (e) { console.error(e); }
+  };
   const handleAdd = () => { setEditingBanner(null); setDrawerMode('add'); setDrawerOpen(true); };
   const handleEdit = (banner: Banner) => { setEditingBanner(banner); setDrawerMode('edit'); setDrawerOpen(true); };
   const handleDelete = (banner: Banner) => { setDeletingBanner(banner); setDeleteModalOpen(true); };
-  const handleConfirmDelete = () => {
-    if (deletingBanner) setBanners(prev => prev.filter(b => b.id !== deletingBanner.id));
+  const handleConfirmDelete = async () => {
+    if (deletingBanner) {
+      try {
+        await bannersApi.delete(deletingBanner.id);
+        fetchBanners();
+      } catch (e) { console.error(e); }
+    }
     setDeleteModalOpen(false); setDeletingBanner(null);
   };
-  const handleSave = (data: Partial<Banner>) => {
-    if (drawerMode === 'edit' && editingBanner) {
-      setBanners(prev => prev.map(b => b.id === editingBanner.id ? { ...b, ...data } : b));
-    } else {
-      const newB: Banner = {
-        id: String(Date.now()), name: data.name || 'New Banner', type: data.type || 'hero', status: 'active',
-        emoji: data.emoji || '🖼️', thumbBg: '#FFF3E0', title: data.title || '', subtitle: data.subtitle,
-        ctaLabel: data.ctaLabel, ctaLink: data.ctaLink, schedule: 'Live now · No end date',
-        enabled: true, order: banners.length + 1, altText: data.altText,
-      };
-      setBanners(prev => [...prev, newB]);
+  const handleSave = async (data: any) => {
+    // Note: data might be a FormData or partial if we implement form data properly
+    // BannerDrawer will be updated to pass FormData if images are present.
+    // For now we'll support both Partial<Banner> and FormData.
+    try {
+      const isFormData = data instanceof FormData;
+      if (drawerMode === 'edit' && editingBanner) {
+        if (isFormData) {
+          await bannersApi.update(editingBanner.id, data);
+        } else {
+          await bannersApi.updatePartial(editingBanner.id, data);
+        }
+      } else {
+        if (isFormData) {
+          await bannersApi.create(data);
+        } else {
+          // Wrap in formData
+          const fd = new FormData();
+          Object.entries(data).forEach(([k, v]) => fd.append(k, String(v)));
+          await bannersApi.create(fd);
+        }
+      }
+      fetchBanners();
+    } catch (e) {
+      console.error('Failed to save banner', e);
     }
     setDrawerOpen(false);
   };
@@ -430,14 +414,21 @@ export const BannerSettingsPage: React.FC = () => {
                 {/* Hero preview */}
                 {selectedBanner.type === 'hero' && (
                   <div className="relative overflow-hidden flex items-center px-5" style={{ height: 160, background: 'linear-gradient(135deg,#1C0F05 0%,#3B2010 100%)' }}>
-                    <div>
+                    <div className="relative z-10 w-2/3">
                       <div className="text-[8px] font-bold tracking-[.12em] uppercase mb-[6px]" style={{ color: '#E8873A' }}>Born in Chennai. Fueling the world.</div>
                       <div className="font-display text-lg font-bold text-white leading-tight mb-[6px]">{selectedBanner.title}</div>
                       {selectedBanner.subtitle && <div className="text-[9px] mb-[10px]" style={{ color: 'rgba(255,255,255,0.6)' }}>{selectedBanner.subtitle}</div>}
                       {selectedBanner.ctaLabel && <span className="inline-block px-3 py-[5px] rounded-[5px] text-[9px] font-bold" style={{ background: '#E8873A', color: '#1a1a1a' }}>{selectedBanner.ctaLabel}</span>}
                     </div>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-[44px]"
-                      style={{ width: 90, height: 90, background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.12)' }}>{selectedBanner.emoji}</div>
+                    {selectedBanner.desktopImageUrl ? (
+                      <div className="absolute right-0 top-0 bottom-0 w-[45%]">
+                        <img src={selectedBanner.desktopImageUrl} alt="" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to right, #24140a, transparent)' }} />
+                      </div>
+                    ) : (
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-[44px]"
+                        style={{ width: 90, height: 90, background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.12)' }}>{selectedBanner.emoji}</div>
+                    )}
                   </div>
                 )}
                 {/* Menu banner preview */}

@@ -1,67 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toggle } from '@/components/ui/Toggle';
 import { StoreDrawer, Store, ExclusiveItem } from '@/components/stores/StoreDrawer';
 import { DeleteModal } from '@/components/categories/DeleteModal';
 
-/* ───────── DATA ───────── */
-const INITIAL_STORES: Store[] = [
-  {
-    id: 'chennai',
-    name: 'Chennai — ECR',
-    city: 'Chennai',
-    state: 'Tamil Nadu, India',
-    address: 'Sea Cliff Conclave, Akkarai, Panaiyur, Chennai — East Coast Road, Tamil Nadu 600119',
-    phone: '+91 98765 43210',
-    whatsapp: '+91 98765 43210',
-    email: 'chennai@fusk-it.com',
-    mapsLink: 'https://maps.google.com/fusk-it-chennai',
-    managerName: 'Sheriff Ahmed',
-    managerPhone: '+91 98765 43210',
-    hours: {
-      Mon: { open: '10am', close: '12am', closed: false },
-      Tue: { open: '10am', close: '12am', closed: false },
-      Wed: { open: '10am', close: '12am', closed: false },
-      Thu: { open: '10am', close: '12am', closed: false },
-      Fri: { open: '10am', close: '12am', closed: false },
-      Sat: { open: '10am', close: '1am', closed: false },
-      Sun: { open: '10am', close: '1am', closed: false },
-    },
-    enabled: true,
-    exclusiveItems: [
-      { emoji: '🍗', name: 'Kozhi Butter Bun', price: '₹199' },
-      { emoji: '🌶️', name: 'Spicy Mutta Bun', price: '₹169' },
-    ],
-    gallery: ['🏪', '🌅', '🥐', '🍟'],
-  },
-  {
-    id: 'bangalore',
-    name: 'Bangalore',
-    city: 'Bangalore',
-    state: 'Karnataka, India',
-    address: '123 Indiranagar 100ft Road, Bangalore, Karnataka 560038',
-    phone: '+91 98765 43211',
-    whatsapp: '+91 98765 43211',
-    email: 'bangalore@fusk-it.com',
-    mapsLink: 'https://maps.google.com/fusk-it-blore',
-    managerName: 'Ravi Kumar',
-    managerPhone: '+91 98765 43211',
-    hours: {
-      Mon: { open: '11am', close: '11pm', closed: false },
-      Tue: { open: '11am', close: '11pm', closed: false },
-      Wed: { open: '11am', close: '11pm', closed: false },
-      Thu: { open: '11am', close: '11pm', closed: false },
-      Fri: { open: '11am', close: '12am', closed: false },
-      Sat: { open: '11am', close: '12am', closed: false },
-      Sun: { open: '11am', close: '11pm', closed: false },
-    },
-    enabled: true,
-    exclusiveItems: [
-      { emoji: '🥙', name: 'Masala Dosa Bun', price: '₹179' },
-      { emoji: '🧈', name: 'Ghee Podi Bun', price: '₹189' },
-    ],
-    gallery: ['🏬', '🌆', '🍛', '☕'],
-  }
-];
+import { storesApi } from '@/services/api';
 
 const VISIT_DATA = {
   chennai: { total: '4,891', change: '↑ 12% vs last week', bars: [55, 65, 80, 60, 90, 100, 85] },
@@ -136,46 +78,101 @@ const todayName = DAYS[new Date().getDay()];
 
 /* ───────── COMPONENT ───────── */
 export const ManageStoresPage: React.FC = () => {
-  const [stores, setStores] = useState<Store[]>(INITIAL_STORES);
-  const [selectedId, setSelectedId] = useState<string>('chennai');
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedId, setSelectedId] = useState<string>('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'add' | 'edit'>('add');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [tempClosed, setTempClosed] = useState(false);
+  const [meta, setMeta] = useState<any>(null);
+
+  const fetchStores = async () => {
+    try {
+      const res = await storesApi.list();
+      setStores(res.data);
+      setMeta(res.meta);
+      if (res.data.length > 0 && !selectedId) {
+        setSelectedId(res.data[0].id);
+        setTempClosed(res.data[0].temporarilyClosed);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchStores();
+  }, []);
 
   const selectedStore = stores.find(s => s.id === selectedId) || stores[0];
-  const showOnWebsite = selectedStore.enabled;
-  const exclusives = selectedStore.exclusiveItems;
-  const gallery = selectedStore.gallery;
+  const showOnWebsite = selectedStore?.enabled ?? false;
+  const exclusives = selectedStore?.exclusiveItems ?? [];
+  const gallery = selectedStore?.gallery ?? [];
   const visits = VISIT_DATA[selectedId as keyof typeof VISIT_DATA] || VISIT_DATA.chennai;
 
   const handleAdd = () => { setDrawerMode('add'); setDrawerOpen(true); };
   const handleEdit = () => { setDrawerMode('edit'); setDrawerOpen(true); };
-  const handleSave = (_data: Partial<Store>) => { /* save logic */ };
+  const handleSave = async (data: Partial<Store>) => {
+    try {
+      if (drawerMode === 'edit' && selectedStore) {
+        await storesApi.update(selectedStore.id, data as any);
+      } else {
+        await storesApi.create(data as any);
+      }
+      fetchStores();
+    } catch (e) {
+      console.error('Failed to save store', e);
+    }
+  };
 
-  const toggleWebsite = () => {
-    setStores(prev => prev.map(s => s.id === selectedId ? { ...s, enabled: !s.enabled } : s));
+  const toggleWebsite = async () => {
+    if (!selectedStore) return;
+    try {
+      await storesApi.update(selectedStore.id, { enabled: !selectedStore.enabled });
+      fetchStores();
+    } catch (e) { console.error(e); }
+  };
+
+  const toggleTempClosed = async () => {
+    if (!selectedStore) return;
+    try {
+      const nextVal = !tempClosed;
+      setTempClosed(nextVal);
+      await storesApi.update(selectedStore.id, { temporarilyClosed: nextVal });
+      fetchStores();
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedStore) return;
+    try {
+      await storesApi.delete(selectedStore.id);
+      setSelectedId('');
+      fetchStores();
+    } catch (e) { console.error(e); }
   };
 
   /* ── Exclusive items CRUD ── */
-  const addExclusiveItem = (item: ExclusiveItem) => {
-    setStores(prev => prev.map(s =>
-      s.id === selectedId
-        ? { ...s, exclusiveItems: [...s.exclusiveItems, item] }
-        : s
-    ));
+  const addExclusiveItem = async (item: ExclusiveItem) => {
+    if (!selectedStore) return;
+    try {
+      await storesApi.addExclusiveItem(selectedStore.id, item);
+      fetchStores();
+    } catch (e) { console.error(e); }
   };
 
-  const removeExclusiveItem = (index: number) => {
-    setStores(prev => prev.map(s =>
-      s.id === selectedId
-        ? { ...s, exclusiveItems: s.exclusiveItems.filter((_, i) => i !== index) }
-        : s
-    ));
+  const removeExclusiveItem = async (index: number) => {
+    if (!selectedStore) return;
+    try {
+      await storesApi.removeExclusiveItem(selectedStore.id, index);
+      fetchStores();
+    } catch (e) { console.error(e); }
   };
 
   /* ── Gallery CRUD ── */
-  const addGalleryPhoto = (emoji: string) => {
+  const addGalleryPhoto = async (emoji: string) => {
+    // Note: API expects a file, this is mock logic for the UI emoji placeholder
+    // In a real implementation you would use storesApi.addGalleryPhoto(storeId, file)
     setStores(prev => prev.map(s =>
       s.id === selectedId
         ? { ...s, gallery: [...s.gallery, emoji] }
@@ -183,15 +180,15 @@ export const ManageStoresPage: React.FC = () => {
     ));
   };
 
-  const removeGalleryPhoto = (index: number) => {
-    setStores(prev => prev.map(s =>
-      s.id === selectedId
-        ? { ...s, gallery: s.gallery.filter((_, i) => i !== index) }
-        : s
-    ));
+  const removeGalleryPhoto = async (index: number) => {
+    if (!selectedStore) return;
+    try {
+      await storesApi.removeGalleryPhoto(selectedStore.id, index);
+      fetchStores();
+    } catch (e) { console.error(e); }
   };
 
-  const managerInitials = selectedStore.managerName
+  const managerInitials = selectedStore?.managerName
     ? selectedStore.managerName.split(' ').map(w => w[0]).join('').toUpperCase()
     : '??';
 
@@ -212,10 +209,10 @@ export const ManageStoresPage: React.FC = () => {
 
       {/* ═══ STATS STRIP ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-shrink-0">
-        <StatCard icon={<StoreIcon />} bg="var(--orange-light)" color="var(--orange)" value={stores.length} label="Total stores" />
-        <StatCard icon={<EyeIcon />} bg="var(--green-bg)" color="var(--green)" value={stores.filter(s => s.enabled).length} label="Open now" />
-        <StatCard icon={<ClipboardIcon />} bg="var(--blue-bg)" color="var(--blue)" value={38} label="Total menu items" />
-        <StatCard icon={<UsersIcon />} bg="var(--red-bg)" color="var(--red)" value={4} label="Exclusive items total" />
+        <StatCard icon={<StoreIcon />} bg="var(--orange-light)" color="var(--orange)" value={meta?.total || 0} label="Total stores" />
+        <StatCard icon={<EyeIcon />} bg="var(--green-bg)" color="var(--green)" value={meta?.open || 0} label="Open now" />
+        <StatCard icon={<ClipboardIcon />} bg="var(--blue-bg)" color="var(--blue)" value={meta?.totalMenuItems || 0} label="Total menu items" />
+        <StatCard icon={<UsersIcon />} bg="var(--red-bg)" color="var(--red)" value={meta?.totalExclusiveItems || 0} label="Exclusive items total" />
       </div>
 
       {/* ═══ STORE TABS ═══ */}
@@ -276,15 +273,15 @@ export const ManageStoresPage: React.FC = () => {
               </div>
               {/* Quick stats bar */}
               <div className="px-4 py-4 flex flex-wrap gap-x-6 gap-y-3 items-center">
-                <QuickStat value="4.3" label="Rating" />
+                <QuickStat value={selectedStore.rating ? selectedStore.rating.toString() : "—"} label="Rating" />
                 <Divider />
-                <QuickStat value="488+" label="Reviews" />
+                <QuickStat value={selectedStore.reviewCount ? `${selectedStore.reviewCount}+` : "0"} label="Reviews" />
                 <Divider />
-                <QuickStat value="36" label="Menu items" />
+                <QuickStat value={selectedStore.menuItemCount?.toString() || "0"} label="Menu items" />
                 <Divider />
-                <QuickStat value="2" label="Exclusives" />
+                <QuickStat value={selectedStore.exclusiveItemCount?.toString() || "0"} label="Exclusives" />
                 <Divider />
-                <QuickStat value="2004" label="Founded" />
+                <QuickStat value={selectedStore.foundedYear?.toString() || "—"} label="Founded" />
               </div>
             </div>
 
@@ -316,7 +313,7 @@ export const ManageStoresPage: React.FC = () => {
             {/* ── Opening Hours ── */}
             <InfoCard title="Opening hours" icon={<ClockIcon />} onEdit={handleEdit}>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-[6px]">
-                {Object.entries(selectedStore.hours).map(([day, h]) => {
+                {selectedStore.hours && Object.entries(selectedStore.hours).map(([day, h]) => {
                   const isToday = day === todayName;
                   return (
                     <div key={day} className="rounded-lg p-2 text-center"
@@ -452,7 +449,7 @@ export const ManageStoresPage: React.FC = () => {
                     <div className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>Mark as temporarily closed</div>
                     <div className="text-[10px] mt-[2px]" style={{ color: 'var(--text-muted)' }}>Shows "Temporarily closed" badge on the site</div>
                   </div>
-                  <Toggle on={tempClosed} onToggle={() => setTempClosed(!tempClosed)} />
+                  <Toggle on={tempClosed} onToggle={toggleTempClosed} />
                 </div>
                 {/* Warning */}
                 <div className="flex items-start gap-[7px] px-3 py-2 rounded-lg text-[11px]"
@@ -522,7 +519,7 @@ export const ManageStoresPage: React.FC = () => {
 
       {/* ═══ MODALS ═══ */}
       <StoreDrawer open={drawerOpen} mode={drawerMode} store={drawerMode === 'edit' ? selectedStore : null} onClose={() => setDrawerOpen(false)} onSave={handleSave} />
-      <DeleteModal open={deleteModalOpen} categoryName={selectedStore?.name || ''} onClose={() => setDeleteModalOpen(false)} onConfirm={() => setDeleteModalOpen(false)} />
+      <DeleteModal open={deleteModalOpen} categoryName={selectedStore?.name || ''} onClose={() => setDeleteModalOpen(false)} onConfirm={handleDelete} />
     </div>
   );
 };

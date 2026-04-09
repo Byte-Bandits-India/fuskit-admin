@@ -6,7 +6,7 @@ interface BannerDrawerProps {
   mode: 'add' | 'edit';
   banner: Banner | null;
   onClose: () => void;
-  onSave: (data: Partial<Banner>) => void;
+  onSave: (data: any) => void;
 }
 
 const TYPE_OPTIONS: { key: BannerType; emoji: string; label: string; sub: string; bg: string }[] = [
@@ -31,6 +31,9 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('23:59');
   const [enabled, setEnabled] = useState(true);
+  
+  const [desktopImage, setDesktopImage] = useState<File | null>(null);
+  const [mobileImage, setMobileImage] = useState<File | null>(null);
 
   useEffect(() => {
     if (mode === 'edit' && banner) {
@@ -38,16 +41,43 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
       setSubtitle(banner.subtitle || ''); setAltText(banner.altText || '');
       setCtaLabel(banner.ctaLabel || ''); setCtaLink(banner.ctaLink || '');
       setOrder(banner.order); setEnabled(banner.enabled);
+      setScheduleEnabled(banner.scheduleEnabled ?? false);
+      setStartDate(banner.startDate ?? ''); setStartTime(banner.startTime ?? '00:00');
+      setEndDate(banner.endDate ?? ''); setEndTime(banner.endTime ?? '23:59');
     } else {
       setType('hero'); setName(''); setTitle(''); setSubtitle(''); setAltText('');
-      setCtaLabel(''); setCtaLink(''); setOrder(1); setScheduleEnabled(true);
+      setCtaLabel(''); setCtaLink(''); setOrder(1); setScheduleEnabled(false);
       setStartDate(''); setStartTime('00:00'); setEndDate(''); setEndTime('23:59'); setEnabled(true);
     }
+    setDesktopImage(null); setMobileImage(null);
   }, [open, mode, banner]);
 
   const handleSubmit = () => {
-    if (!name.trim()) return;
-    onSave({ type, name, title, subtitle, altText, ctaLabel, ctaLink, enabled, order });
+    if (!name.trim() || !title.trim()) return;
+    
+    // Always use FormData to match the Backend specification which expects Multipart
+    const fd = new FormData();
+    fd.append('type', type);
+    fd.append('name', name);
+    fd.append('title', title);
+    if (subtitle) fd.append('subtitle', subtitle);
+    if (altText) fd.append('altText', altText);
+    if (ctaLabel) fd.append('ctaLabel', ctaLabel);
+    if (ctaLink) fd.append('ctaLink', ctaLink);
+    fd.append('enabled', String(enabled));
+    fd.append('order', String(order));
+    fd.append('scheduleEnabled', String(scheduleEnabled));
+    if (scheduleEnabled) {
+      if (startDate) fd.append('startDate', startDate);
+      if (startTime) fd.append('startTime', startTime);
+      if (endDate) fd.append('endDate', endDate);
+      if (endTime) fd.append('endTime', endTime);
+    }
+    
+    if (desktopImage) fd.append('desktopImage', desktopImage);
+    if (mobileImage) fd.append('mobileImage', mobileImage);
+
+    onSave(fd);
   };
 
   const inputStyle: React.CSSProperties = {
@@ -154,10 +184,16 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
           {/* Images */}
           <SectionTitle label="Images" />
           <FormGroup label="Desktop image" required>
-            <UploadZone label="Click to upload desktop image" hint="PNG, JPG, WebP · 1920×600px recommended · Max 5MB" />
+            <input type="file" id="desktopImageUpload" hidden onChange={e => { if (e.target.files?.length) setDesktopImage(e.target.files[0]); }} accept="image/*" />
+            <div onClick={() => document.getElementById('desktopImageUpload')?.click()}>
+              <UploadZone label={desktopImage ? desktopImage.name : "Click to upload desktop image"} hint="PNG, JPG, WebP · 1920×600px recommended · Max 5MB" />
+            </div>
           </FormGroup>
           <FormGroup label="Mobile image" optional="optional — uses desktop if empty">
-            <UploadZone label="Click to upload mobile image" hint="PNG, JPG, WebP · 768×500px recommended · Max 3MB" isMobile />
+            <input type="file" id="mobileImageUpload" hidden onChange={e => { if (e.target.files?.length) setMobileImage(e.target.files[0]); }} accept="image/*" />
+            <div onClick={() => document.getElementById('mobileImageUpload')?.click()}>
+              <UploadZone label={mobileImage ? mobileImage.name : "Click to upload mobile image"} hint="PNG, JPG, WebP · 768×500px recommended · Max 3MB" isMobile />
+            </div>
             <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>Shown on screens under 768px. Recommended for hero banners for best appearance.</div>
           </FormGroup>
 

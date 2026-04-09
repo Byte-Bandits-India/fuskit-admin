@@ -516,7 +516,270 @@
             "url": {
               "raw": "{{base_url}}/stores",
               "host": ["{{base_url}}"],
+              "path": ["stores"],
+              "query": [
+                { "key": "q", "value": "", "disabled": true },
+                { "key": "enabled", "value": "true", "disabled": true },
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "pageSize", "value": "50", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Store",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stores/:id",
+              "host": ["{{base_url}}"],
+              "path": ["stores", ":id"],
+              "variable": [{ "key": "id", "value": "<paste_store_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Store",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"New Store\",\n    \"city\": \"Chennai\",\n    \"state\": \"Tamil Nadu\",\n    \"address\": \"123 Model Rd\",\n    \"phone\": \"+91 9999999999\",\n    \"mapsLink\": \"https://maps.google.com\",\n    \"hours\": {\n        \"Mon\": { \"open\": \"10am\", \"close\": \"10pm\", \"closed\": false },\n        \"Tue\": { \"open\": \"10am\", \"close\": \"10pm\", \"closed\": false },\n        \"Wed\": { \"open\": \"10am\", \"close\": \"10pm\", \"closed\": false },\n        \"Thu\": { \"open\": \"10am\", \"close\": \"10pm\", \"closed\": false },\n        \"Fri\": { \"open\": \"10am\", \"close\": \"10pm\", \"closed\": false },\n        \"Sat\": { \"open\": \"10am\", \"close\": \"10pm\", \"closed\": false },\n        \"Sun\": { \"open\": \"10am\", \"close\": \"10pm\", \"closed\": false }\n    }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/stores",
+              "host": ["{{base_url}}"],
               "path": ["stores"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Store",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"enabled\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/stores/:id",
+              "host": ["{{base_url}}"],
+              "path": ["stores", ":id"],
+              "variable": [{ "key": "id", "value": "<paste_store_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Store",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stores/:id",
+              "host": ["{{base_url}}"],
+              "path": ["stores", ":id"],
+              "variable": [{ "key": "id", "value": "<paste_store_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Exclusive Item",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"emoji\": \"🍕\",\n    \"name\": \"Store Special Pizza\",\n    \"price\": \"₹199\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/stores/:id/exclusive-items",
+              "host": ["{{base_url}}"],
+              "path": ["stores", ":id", "exclusive-items"],
+              "variable": [{ "key": "id", "value": "<paste_store_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Exclusive Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stores/:id/exclusive-items/:index",
+              "host": ["{{base_url}}"],
+              "path": ["stores", ":id", "exclusive-items", ":index"],
+              "variable": [
+                { "key": "id", "value": "<paste_store_id>" },
+                { "key": "index", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Gallery Photo (Multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/stores/:id/gallery",
+              "host": ["{{base_url}}"],
+              "path": ["stores", ":id", "gallery"],
+              "variable": [{ "key": "id", "value": "<paste_store_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Gallery Photo",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/stores/:id/gallery/:index",
+              "host": ["{{base_url}}"],
+              "path": ["stores", ":id", "gallery", ":index"],
+              "variable": [
+                { "key": "id", "value": "<paste_store_id>" },
+                { "key": "index", "value": "0" }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Banners",
+      "item": [
+        {
+          "name": "List Banners",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/banners",
+              "host": ["{{base_url}}"],
+              "path": ["banners"],
+              "query": [
+                { "key": "q", "value": "", "disabled": true },
+                { "key": "status", "value": "active", "disabled": true },
+                { "key": "type", "value": "hero", "disabled": true },
+                { "key": "sortBy", "value": "order", "disabled": true },
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "pageSize", "value": "50", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Banner",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/banners/:id",
+              "host": ["{{base_url}}"],
+              "path": ["banners", ":id"],
+              "variable": [{ "key": "id", "value": "<paste_banner_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Banner (Multipart)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Summer Sale", "type": "text" },
+                { "key": "type", "value": "hero", "type": "text" },
+                { "key": "title", "value": "Grab our summer offers", "type": "text" },
+                { "key": "desktopImage", "type": "file", "src": [] },
+                { "key": "mobileImage", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/banners",
+              "host": ["{{base_url}}"],
+              "path": ["banners"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Banner (Multipart)",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "enabled", "value": "false", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/banners/:id",
+              "host": ["{{base_url}}"],
+              "path": ["banners", ":id"],
+              "variable": [{ "key": "id", "value": "<paste_banner_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Banner",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/banners/:id",
+              "host": ["{{base_url}}"],
+              "path": ["banners", ":id"],
+              "variable": [{ "key": "id", "value": "<paste_banner_id>" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder Banners",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"order\": [\n        { \"id\": \"<banner_id_1>\", \"displayOrder\": 1 },\n        { \"id\": \"<banner_id_2>\", \"displayOrder\": 2 }\n    ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/banners/reorder",
+              "host": ["{{base_url}}"],
+              "path": ["banners", "reorder"]
             }
           },
           "response": []

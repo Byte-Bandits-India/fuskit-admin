@@ -370,17 +370,242 @@ export const menuItemsApi = {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
 // Stores API
 // ────────────────────────────────────────────────────────────────────────────
+
+export interface StoreExclusiveItemDTO {
+  emoji: string;
+  name: string;
+  price: string;
+}
+
+export interface StoreHoursDTO {
+  open: string;
+  close: string;
+  closed: boolean;
+}
 
 export interface StoreDTO {
   id: string;
   name: string;
+  city: string;
+  state: string;
+  address: string;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  mapsLink: string;
+  mapsEmbed?: string;
+  managerName?: string;
+  managerPhone?: string;
+  hours: Record<string, StoreHoursDTO>;
+  enabled: boolean;
+  temporarilyClosed: boolean;
+  exclusiveItems: StoreExclusiveItemDTO[];
+  gallery: string[];
+  rating?: number;
+  reviewCount?: number;
+  menuItemCount?: number;
+  exclusiveItemCount?: number;
+  foundedYear?: number;
+  displayOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoreMeta {
+  total: number;
+  open: number;
+  closed: number;
+  totalMenuItems: number;
+  totalExclusiveItems: number;
+}
+
+export interface StoreListResponse {
+  data: StoreDTO[];
+  meta: StoreMeta;
+}
+
+export interface CreateStorePayload {
+  name: string;
+  city: string;
+  state: string;
+  address: string;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  mapsLink: string;
+  mapsEmbed?: string;
+  managerName?: string;
+  managerPhone?: string;
+  hours: Record<string, StoreHoursDTO>;
+  enabled?: boolean;
+  exclusiveItems?: StoreExclusiveItemDTO[];
+  gallery?: string[];
+  rating?: number | null;
+  reviewCount?: number;
+  foundedYear?: number | null;
+  displayOrder?: number;
+}
+
+export type UpdateStorePayload = Partial<CreateStorePayload> & { temporarilyClosed?: boolean };
+
+export interface ListStoresParams {
+  q?: string;
+  enabled?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
 export const storesApi = {
-  /**
-   * GET /stores — list all stores
-   */
-  list: () => request<{ data: StoreDTO[] }>('/stores'),
+  list: (params?: ListStoresParams) => 
+    request<StoreListResponse>(`/stores${buildQS(params ?? {})}`),
+  
+  get: (id: string) => 
+    request<{ data: StoreDTO }>(`/stores/${id}`),
+
+  create: (data: CreateStorePayload) => 
+    request<{ data: StoreDTO }>('/stores', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  update: (id: string, data: UpdateStorePayload) => 
+    request<{ data: StoreDTO }>(`/stores/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) => 
+    request<{ message: string }>(`/stores/${id}`, { method: 'DELETE' }),
+
+  addExclusiveItem: (id: string, item: StoreExclusiveItemDTO) => 
+    request<{ data: StoreDTO }>(`/stores/${id}/exclusive-items`, {
+      method: 'POST',
+      body: JSON.stringify(item),
+    }),
+
+  removeExclusiveItem: (id: string, index: number) => 
+    request<{ data: StoreDTO }>(`/stores/${id}/exclusive-items/${index}`, { method: 'DELETE' }),
+
+  addGalleryPhoto: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const token = getToken();
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    return fetch(`${BASE_URL}/stores/${id}/gallery`, { method: 'POST', headers, body: formData })
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to upload photo');
+        return (await res.json()) as { data: { url: string, store: StoreDTO } };
+      });
+  },
+
+  removeGalleryPhoto: (id: string, index: number) => 
+    request<{ data: StoreDTO }>(`/stores/${id}/gallery/${index}`, { method: 'DELETE' }),
+
+  getAnalytics: (id: string, period = 'week') => 
+    request<{ data: any }>(`/stores/${id}/analytics?period=${period}`)
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Banners API
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface BannerDTO {
+  id: string;
+  name: string;
+  type: 'hero' | 'menu' | 'announcement' | 'popup';
+  status: 'active' | 'inactive' | 'scheduled' | 'expired';
+  emoji: string;
+  thumbBg: string;
+  title: string;
+  subtitle?: string;
+  ctaLabel?: string;
+  ctaLink?: string;
+  desktopImageUrl?: string;
+  mobileImageUrl?: string;
+  schedule: string;
+  scheduleEnabled: boolean;
+  startDate?: string | null;
+  startTime?: string | null;
+  endDate?: string | null;
+  endTime?: string | null;
+  enabled: boolean;
+  order: number;
+  altText?: string;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BannerMeta {
+  total: number;
+  active: number;
+  scheduled: number;
+  inactive: number;
+  types: number;
+}
+
+export interface BannerListResponse {
+  data: BannerDTO[];
+  meta: BannerMeta;
+}
+
+export interface ListBannersParams {
+  q?: string;
+  status?: string;
+  type?: string;
+  sortBy?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export const bannersApi = {
+  list: (params?: ListBannersParams) => 
+    request<BannerListResponse>(`/banners${buildQS(params ?? {})}`),
+
+  get: (id: string) => 
+    request<{ data: BannerDTO }>(`/banners/${id}`),
+
+  create: (formData: FormData) => {
+    const token = getToken();
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    return fetch(`${BASE_URL}/banners`, { method: 'POST', headers, body: formData })
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to create banner');
+        return (await res.json()) as { data: BannerDTO };
+      });
+  },
+
+  update: (id: string, formData: FormData) => {
+    const token = getToken();
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    return fetch(`${BASE_URL}/banners/${id}`, { method: 'PUT', headers, body: formData })
+      .then(async res => {
+        if (!res.ok) throw new Error('Failed to update banner');
+        return (await res.json()) as { data: BannerDTO };
+      });
+  },
+  
+  updatePartial: (id: string, data: Partial<BannerDTO>) => 
+    request<{ data: BannerDTO }>(`/banners/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  delete: (id: string) => 
+    request<{ message: string }>(`/banners/${id}`, { method: 'DELETE' }),
+
+  reorder: (order: ReorderItem[]) => 
+    request<{ message: string }>('/banners/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ order }),
+    }),
 };

@@ -1,29 +1,9 @@
 import React from 'react';
 
-export interface ExclusiveItem {
-  emoji: string;
-  name: string;
-  price: string;
-}
+import type { StoreDTO } from '@/services/api';
 
-export interface Store {
-  id: string;
-  name: string;
-  city: string;
-  state: string;
-  address: string;
-  phone: string;
-  whatsapp?: string;
-  email?: string;
-  mapsLink: string;
-  mapsEmbed?: string;
-  managerName?: string;
-  managerPhone?: string;
-  hours: Record<string, { open: string; close: string; closed: boolean }>;
-  enabled: boolean;
-  exclusiveItems: ExclusiveItem[];
-  gallery: string[];
-}
+export type ExclusiveItem = StoreDTO['exclusiveItems'][0];
+export type Store = StoreDTO;
 
 interface StoreDrawerProps {
   open: boolean;
