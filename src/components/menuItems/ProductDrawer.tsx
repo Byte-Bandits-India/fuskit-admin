@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Product } from '@/pages/MenuItemsPage';
 
 interface ProductDrawerProps {
@@ -37,6 +37,42 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
   const [visible, setVisible] = useState(true);
   const [selectedEmoji, setSelectedEmoji] = useState('🍽️');
 
+  // Image / video upload state
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).slice(0, 5);
+    if (!files.length) return;
+    setImagePreviews(files.map(f => URL.createObjectURL(f)));
+  };
+
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 5);
+    if (!files.length) return;
+    setImagePreviews(files.map(f => URL.createObjectURL(f)));
+  };
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVideoPreview(URL.createObjectURL(file));
+  };
+
+  const handleVideoDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (!file || !file.type.startsWith('video/')) return;
+    setVideoPreview(URL.createObjectURL(file));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+  const removeImage = (idx: number) => setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+  const removeVideo = () => { setVideoPreview(null); if (videoInputRef.current) videoInputRef.current.value = ''; };
+
   useEffect(() => {
     if (mode === 'edit' && product) {
       setName(product.name);
@@ -56,6 +92,11 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       setSelectedStores(stores); setStoreSpecial('');
       setBadges([]); setVisible(true); setSelectedEmoji('🍽️');
     }
+    // Reset media
+    setImagePreviews([]);
+    setVideoPreview(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (videoInputRef.current) videoInputRef.current.value = '';
   }, [open, mode, product, stores]);
 
   const discount = price && oldPrice && oldPrice > price
@@ -317,34 +358,118 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
           <SectionTitle icon="🖼️" label="Images & video" />
 
           <FormGroup label="Product images" required>
-            <div
-              className="w-full flex flex-col items-center gap-[6px] rounded-[10px] p-4 cursor-pointer transition-all text-center"
-              style={{ background: 'var(--bg-card2)', border: '2px dashed var(--border-strong)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)'; (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-              </svg>
-              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click or drag images here</span>
-              <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>PNG, JPG, WebP · Max 5MB each · Up to 5 images</small>
-            </div>
+            {/* Hidden file input */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              multiple
+              onChange={handleImageChange}
+              style={{ display: 'none' }}
+            />
+
+            {imagePreviews.length > 0 ? (
+              <div className="flex flex-col gap-[8px]">
+                <div className="grid gap-[6px]" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                  {imagePreviews.map((src, i) => (
+                    <div key={i} className="relative rounded-lg overflow-hidden group/img" style={{ height: 70 }}>
+                      <img src={src} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                      <button
+                        onClick={e => { e.stopPropagation(); removeImage(i); }}
+                        className="absolute top-1 right-1 flex items-center justify-center rounded-full opacity-0 group-hover/img:opacity-100 transition-opacity"
+                        style={{ width: 18, height: 18, background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', color: '#fff' }}
+                      >
+                        <svg viewBox="0 0 24 24" className="w-[9px] h-[9px]" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  {imagePreviews.length < 5 && (
+                    <div
+                      onClick={() => imageInputRef.current?.click()}
+                      className="flex items-center justify-center rounded-lg cursor-pointer transition-all"
+                      style={{ height: 70, background: 'var(--bg-card2)', border: '2px dashed var(--border-strong)' }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}><path d="M12 5v14M5 12h14" /></svg>
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => imageInputRef.current?.click()}
+                  className="text-[10px] cursor-pointer text-left"
+                  style={{ background: 'none', border: 'none', color: 'var(--orange)', textDecoration: 'underline', padding: 0 }}
+                >
+                  Add more (up to 5)
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => imageInputRef.current?.click()}
+                onDrop={handleImageDrop}
+                onDragOver={handleDragOver}
+                className="w-full flex flex-col items-center gap-[6px] rounded-[10px] p-4 cursor-pointer transition-all text-center"
+                style={{ background: 'var(--bg-card2)', border: '2px dashed var(--border-strong)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)'; (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                </svg>
+                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click or drag images here</span>
+                <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>PNG, JPG, WebP · Max 5MB each · Up to 5 images</small>
+              </div>
+            )}
           </FormGroup>
 
           <FormGroup label="Product video" optional="optional">
-            <div
-              className="w-full flex flex-col items-center gap-[6px] rounded-[10px] p-4 cursor-pointer transition-all text-center"
-              style={{ background: 'var(--bg-card2)', border: '2px dashed var(--border-strong)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)'; (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}>
-                <polygon points="23 7 16 12 23 17 23 7" />
-                <rect x="1" y="5" width="15" height="14" rx="2" />
-              </svg>
-              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Upload a short video</span>
-              <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>MP4, MOV · Max 30MB · Under 30 seconds recommended</small>
-            </div>
+            {/* Hidden video input */}
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/mp4,video/quicktime"
+              onChange={handleVideoChange}
+              style={{ display: 'none' }}
+            />
+
+            {videoPreview ? (
+              <div className="relative rounded-[10px] overflow-hidden" style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)' }}>
+                <video
+                  src={videoPreview}
+                  className="w-full rounded-[10px]"
+                  style={{ maxHeight: 140, objectFit: 'cover' }}
+                  controls
+                  muted
+                />
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>Video selected</span>
+                  <button
+                    onClick={removeVideo}
+                    className="text-[10px] cursor-pointer"
+                    style={{ background: 'none', border: 'none', color: 'var(--red)', textDecoration: 'underline', padding: 0 }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => videoInputRef.current?.click()}
+                onDrop={handleVideoDrop}
+                onDragOver={handleDragOver}
+                className="w-full flex flex-col items-center gap-[6px] rounded-[10px] p-4 cursor-pointer transition-all text-center"
+                style={{ background: 'var(--bg-card2)', border: '2px dashed var(--border-strong)' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)'; (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}
+              >
+                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)' }}>
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" />
+                </svg>
+                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click or drag to upload video</span>
+                <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>MP4, MOV · Max 30MB · Under 30 seconds recommended</small>
+              </div>
+            )}
             <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
               Shown as an autoplay loop on the menu card. Optional but great for engagement.
             </div>

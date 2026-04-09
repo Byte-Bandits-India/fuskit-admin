@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Category } from '@/pages/CategoriesPage';
 
 interface CategoryDrawerProps {
@@ -22,18 +22,43 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
   const [selectedEmoji, setSelectedEmoji] = useState('🥐');
   const [visible, setVisible] = useState(true);
   const [order, setOrder] = useState(1);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setImagePreview(url);
+  };
+
+  const handleDropZoneClick = () => fileInputRef.current?.click();
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
 
   useEffect(() => {
     if (mode === 'edit' && category) {
       setName(category.name);
       setSelectedEmoji(category.emoji);
       setVisible(category.visible);
+      setOrder(category.displayOrder ?? 1);
+      setImagePreview(null);
     } else {
       setName('');
       setSelectedEmoji('🥐');
       setVisible(true);
       setOrder(9);
+      setImagePreview(null);
     }
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, [open, mode, category]);
 
   const handleSubmit = () => {
@@ -113,30 +138,76 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
           {/* Image upload */}
           <div className="mb-[18px]">
             <label className="text-xs font-semibold flex items-center gap-1 mb-[6px]" style={{ color: 'var(--text-primary)' }}>
-              Category image <span style={{ color: 'var(--orange)' }}>*</span>
+              Category image <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span>
             </label>
+
+            {/* Hidden real file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
+
+            {/* Drop zone */}
             <div
-              className="w-full flex flex-col items-center justify-center gap-2 rounded-xl cursor-pointer transition-all"
+              onClick={handleDropZoneClick}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="w-full flex flex-col items-center justify-center gap-2 rounded-xl cursor-pointer transition-all relative overflow-hidden"
               style={{
                 height: 150,
-                background: 'var(--bg-card2)',
-                border: '2px dashed var(--border-strong)',
+                background: imagePreview ? 'transparent' : 'var(--bg-card2)',
+                border: `2px dashed ${imagePreview ? 'var(--orange)' : 'var(--border-strong)'}`,
               }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)';
-                (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)';
+                if (!imagePreview) (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)';
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)';
-                (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)';
+                (e.currentTarget as HTMLElement).style.borderColor = imagePreview ? 'var(--orange)' : 'var(--border-strong)';
+                if (!imagePreview) (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)';
               }}
             >
-              <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-              </svg>
-              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click to upload image</span>
-              <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>PNG, JPG up to 5MB · Recommended 400×300px</small>
+              {imagePreview ? (
+                <>
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    style={{ position: 'absolute', inset: 0 }}
+                  />
+                  <div
+                    className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 transition-opacity"
+                    style={{ background: 'rgba(0,0,0,0.45)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}
+                  >
+                    <span className="text-white text-[11px] font-semibold">Click to change</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                  </svg>
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click or drag to upload image</span>
+                  <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>PNG, JPG, WebP · Max 5MB · Recommended 400×300px</small>
+                </>
+              )}
             </div>
+
+            {imagePreview && (
+              <button
+                onClick={e => { e.stopPropagation(); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                className="mt-[5px] text-[10px] cursor-pointer"
+                style={{ background: 'none', border: 'none', color: 'var(--red)', textDecoration: 'underline', padding: 0 }}
+              >
+                Remove image
+              </button>
+            )}
+
             <div className="text-[10px] mt-[5px]" style={{ color: 'var(--text-muted)' }}>
               This image shows as the category card background on the website.
             </div>

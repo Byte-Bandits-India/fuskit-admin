@@ -162,29 +162,52 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
           <EditIcon />
         </button>
 
-        {/* Delete button */}
-        <button
-          onClick={e => { e.stopPropagation(); onDelete(); }}
-          className="flex items-center justify-center rounded-[6px] flex-shrink-0 transition-all duration-[120ms]"
-          style={{
-            width: 26, height: 26,
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            color: 'var(--text-secondary)',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'var(--red-bg)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--red)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--red)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
-          }}
-        >
-          <TrashIcon />
-        </button>
+        {/* Delete button — disabled when category has items */}
+        <div className="relative group/del flex-shrink-0">
+          <button
+            onClick={e => { e.stopPropagation(); if (category.itemCount === 0) onDelete(); }}
+            disabled={category.itemCount > 0}
+            className="flex items-center justify-center rounded-[6px] transition-all duration-[120ms]"
+            style={{
+              width: 26, height: 26,
+              background: category.itemCount > 0 ? 'var(--bg-hover)' : 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              color: category.itemCount > 0 ? 'var(--border-strong)' : 'var(--text-secondary)',
+              cursor: category.itemCount > 0 ? 'not-allowed' : 'pointer',
+            }}
+            onMouseEnter={e => {
+              if (category.itemCount > 0) return;
+              (e.currentTarget as HTMLElement).style.background = 'var(--red-bg)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'var(--red)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--red)';
+            }}
+            onMouseLeave={e => {
+              if (category.itemCount > 0) return;
+              (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+            }}
+          >
+            <TrashIcon />
+          </button>
+          {/* Tooltip shown only when button is disabled */}
+          {category.itemCount > 0 && (
+            <div
+              className="absolute bottom-full right-0 mb-[6px] pointer-events-none opacity-0 group-hover/del:opacity-100 transition-opacity duration-150 whitespace-nowrap z-10"
+              style={{
+                background: 'var(--text-primary)',
+                color: '#fff',
+                fontSize: 10,
+                padding: '4px 8px',
+                borderRadius: 6,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              Move {category.itemCount} item{category.itemCount > 1 ? 's' : ''} first
+              <div style={{ position: 'absolute', bottom: -4, right: 8, width: 8, height: 8, background: 'var(--text-primary)', transform: 'rotate(45deg)', borderRadius: 1 }} />
+            </div>
+          )}
+        </div>
 
         {/* Toggle */}
         <Toggle on={category.visible} onToggle={onToggle} />
