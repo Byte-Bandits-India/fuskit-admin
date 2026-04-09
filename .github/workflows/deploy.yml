@@ -22,6 +22,16 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm install
 
+      - name: 🏗 Inject Environment Variables
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "VITE_API_BASE_URL=http://fusk-it.duckdns.org/api" >> .env
+            echo "VITE_GOOGLE_AUTH_URL=http://fusk-it.duckdns.org/api/auth/google" >> .env
+          else
+            echo "VITE_API_BASE_URL=http://dev-fusk-it.duckdns.org/api" >> .env
+            echo "VITE_GOOGLE_AUTH_URL=http://dev-fusk-it.duckdns.org/api/auth/google" >> .env
+          fi
+
       - name: 🏗 Build Vite App
         run: npm run build
 
