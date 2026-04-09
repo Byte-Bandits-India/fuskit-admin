@@ -594,11 +594,28 @@ export const bannersApi = {
       });
   },
   
-  updatePartial: (id: string, data: Partial<BannerDTO>) => 
-    request<{ data: BannerDTO }>(`/banners/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+  updatePartial: (id: string, data: Partial<BannerDTO>) => {
+    // Backend PUT /banners/:id expects multipart/form-data (for image support).
+    // For partial JSON-only updates (e.g. enable toggle) we wrap in FormData so
+    // the backend can coerce boolean strings ("true"/"false") correctly.
+    const token = getToken();
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    const fd = new FormData();
+    Object.entries(data).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) fd.append(k, String(v));
+    });
+    return fetch(`${BASE_URL}/banners/${id}`, { method: 'PUT', headers, body: fd })
+      .then(async res => {
+        if (!res.ok) {
+          let msg = `Request failed (${res.status})`;
+          try { const b = await res.json() as any; msg = b.message ?? b.error ?? msg; } catch { /* ignore */ }
+          throw new Error(msg);
+        }
+        return (await res.json()) as { data: BannerDTO };
+      });
+  },
 
   delete: (id: string) => 
     request<{ message: string }>(`/banners/${id}`, { method: 'DELETE' }),
@@ -609,3 +626,89 @@ export const bannersApi = {
       body: JSON.stringify({ order }),
     }),
 };
+
+// ─── Dashboard Stats ─────────────────────────────────────────────────────────────
+export interface DashboardStats {
+  categories: { total: number; hidden: number; change: number };
+  menuItems: { total: number; hidden: number; change: number };
+  stores: { total: number; names: string[] };
+  users: { total: number; changePercent: number };
+  pageVisits: { total: number; changePercent: number };
+}
+
+export const dashboardApi = {
+  stats: () => request<{ data: DashboardStats }>('/dashboard/stats').then(res => res.data),
+};
+
+// ─── Announcements ─────────────────────────────────────────────────────────────
+export interface AnnouncementDTO {
+  id: string;
+  text: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const announcementsApi = {
+  list: () => request<{ data: AnnouncementDTO[] }>('/announcements'),
+  create: (data: { text: string; enabled?: boolean }) => 
+    request<{ data: AnnouncementDTO }>('/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  update: (id: string, data: Partial<AnnouncementDTO>) => 
+    request<{ data: AnnouncementDTO }>(`/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+};
+
+// ─── Analytics ─────────────────────────────────────────────────────────────
+export interface PageVisitsResponse {
+  total: number;
+  changePercent: number;
+  series: { day: string; visits: number }[];
+}
+
+export interface StoreVisitsResponse {
+  stores: { name: string; total: number; series: number[] }[];
+  days: string[];
+}
+
+export const analyticsApi = {
+  pageVisits: (range?: string) => 
+    request<PageVisitsResponse>(`/analytics/page-visits${range ? `?range=${range}` : ''}`),
+  storeVisits: (range?: string) => 
+    request<StoreVisitsResponse>(`/analytics/store-visits${range ? `?range=${range}` : ''}`)
+};
+
+// ─── Activity ─────────────────────────────────────────────────────────────
+export interface ActivityItemDTO {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  color: 'orange' | 'green' | 'neutral' | 'purple' | 'blue';
+}
+
+export const activityApi = {
+  list: () => request<{ data: ActivityItemDTO[] }>('/activity'),
+};
+
+// ─── Notifications ─────────────────────────────────────────────────────────────
+export interface NotificationDTO {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  read: boolean;
+  time: string; // From createdAt
+}
+
+export const notificationsApi = {
+  list: () => request<{ data: NotificationDTO[] }>('/notifications'),
+  unreadCount: () => request<{ count: number }>('/notifications/unread-count'),
+  markRead: (id: string) => request<{ message: string }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+  markAllRead: () => request<{ message: string }>('/notifications/mark-all-read', { method: 'PATCH' })
+};
+

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { recentMenuItems } from '@/services/mockData';
+import { menuItemsApi, type MenuItemDTO } from '@/services/api';
 
 const EditIcon = () => (
   <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -26,19 +26,30 @@ const MenuIcon = () => (
   </svg>
 );
 
-export const RecentMenuItems: React.FC = () => (
-  <Card>
-    <CardHeader title={<><MenuIcon /> Recent menu items</>} action="Manage all" />
-    <CardBody>
-      <div>
-        {recentMenuItems.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center gap-[10px] py-2 transition-colors"
-            style={{
-              borderBottom: item.id !== recentMenuItems[recentMenuItems.length - 1].id
-                ? '1px solid var(--border)' : 'none',
-            }}
+export const RecentMenuItems: React.FC = () => {
+  const [items, setItems] = useState<MenuItemDTO[]>([]);
+
+  useEffect(() => {
+    // Ideally pass a sortBy: 'recent' param if API supports it.
+    // Assuming backend returns most recent first, we just take the first 5 elements.
+    menuItemsApi.list({ pageSize: 5 }).then(res => {
+      setItems(res.data.slice(0, 5));
+    }).catch(console.error);
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader title={<><MenuIcon /> Recent menu items</>} action="Manage all" />
+      <CardBody>
+        <div>
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-[10px] py-2 transition-colors"
+              style={{
+                borderBottom: item.id !== items[items.length - 1].id
+                  ? '1px solid var(--border)' : 'none',
+              }}
           >
             {/* Emoji thumb */}
             <div
@@ -58,7 +69,7 @@ export const RecentMenuItems: React.FC = () => (
                 {item.name}
               </div>
               <div className="text-[10px] mt-[2px]" style={{ color: 'var(--text-muted)' }}>
-                {item.category}
+                {item.categoryName || 'Uncategorized'}
               </div>
             </div>
 
@@ -66,8 +77,8 @@ export const RecentMenuItems: React.FC = () => (
             <div
               className="w-2 h-2 rounded-full flex-shrink-0"
               style={{
-                background: item.vegStatus === 'veg' ? 'var(--green)' : 'var(--red)',
-                boxShadow: item.vegStatus === 'veg'
+                background: item.isVeg ? 'var(--green)' : 'var(--red)',
+                boxShadow: item.isVeg
                   ? '0 0 0 2px rgba(45,134,83,.15)'
                   : '0 0 0 2px rgba(201,64,64,.15)',
               }}
@@ -79,12 +90,12 @@ export const RecentMenuItems: React.FC = () => (
             </div>
 
             {/* Status pill */}
-            <StatusPill variant={item.visibility} />
+            <StatusPill variant={item.visible ? 'visible' : 'hidden'} />
 
             {/* Row actions */}
             <div className="flex gap-1">
               <RowBtn><EditIcon /></RowBtn>
-              <RowBtn>{item.visibility === 'visible' ? <EyeOnIcon /> : <EyeOffIcon />}</RowBtn>
+              <RowBtn>{item.visible ? <EyeOnIcon /> : <EyeOffIcon />}</RowBtn>
             </div>
           </div>
         ))}
@@ -92,6 +103,7 @@ export const RecentMenuItems: React.FC = () => (
     </CardBody>
   </Card>
 );
+};
 
 const RowBtn: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div

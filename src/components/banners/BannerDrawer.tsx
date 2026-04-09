@@ -6,7 +6,7 @@ interface BannerDrawerProps {
   mode: 'add' | 'edit';
   banner: Banner | null;
   onClose: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: FormData) => void;
 }
 
 const TYPE_OPTIONS: { key: BannerType; emoji: string; label: string; sub: string; bg: string }[] = [

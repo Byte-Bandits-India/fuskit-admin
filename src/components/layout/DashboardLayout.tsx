@@ -75,6 +75,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onLogout={onLogout}
           user={currentUser}
+          onNavClick={(id) => setActiveId(id)}
         />
         <main
           className="flex-1 overflow-y-auto bg-[#2C1A0E]"

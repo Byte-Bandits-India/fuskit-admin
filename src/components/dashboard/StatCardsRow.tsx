@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { dashboardApi, type DashboardStats } from '@/services/api';
 import catImg from '@/assets/1.png';
 import menuImg from '@/assets/2.png';
 import storeImg from '@/assets/3.png';
@@ -68,7 +69,7 @@ const cardHoverProps = {
   }
 };
 
-const CategoriesCard: React.FC = () => (
+const CategoriesCard: React.FC<{ data?: DashboardStats['categories'] }> = ({ data }) => (
   <div
     className="flex flex-col items-start rounded-2xl p-5 cursor-pointer relative overflow-hidden transition-all duration-300 w-full min-h-[200px]"
     style={cardBase}
@@ -82,7 +83,7 @@ const CategoriesCard: React.FC = () => (
     </div>
 
     <div className="flex items-baseline gap-2 mt-[18px] mb-2 relative z-10">
-      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>4</span>
+      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>{data?.total ?? '-'}</span>
       <span className="text-[18px] font-medium" style={{ color: '#41735D' }}>Items</span>
     </div>
 
@@ -91,16 +92,16 @@ const CategoriesCard: React.FC = () => (
         className="text-[11px] font-medium px-[24px] py-[4px] rounded-[14px] border border-[#41735D]"
         style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
       >
-        6 hidden
+        {data?.hidden ?? 0} hidden
       </span>
       <span className="text-[12px] font-medium" style={{ color: '#979797' }}>
-        0 since last week
+        {data?.change ? (data.change > 0 ? `+${data.change}` : data.change) : '0'} since last week
       </span>
     </div>
   </div>
 );
 
-const MenuItemsCard: React.FC = () => (
+const MenuItemsCard: React.FC<{ data?: DashboardStats['menuItems'] }> = ({ data }) => (
   <div
     className="flex flex-col items-start rounded-2xl p-5 cursor-pointer relative overflow-hidden transition-all duration-300 w-full min-h-[200px]"
     style={cardBase}
@@ -114,7 +115,7 @@ const MenuItemsCard: React.FC = () => (
     </div>
 
     <div className="flex items-baseline gap-2 mt-[18px] mb-2 relative z-10">
-      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#F56A27' }}>48</span>
+      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#F56A27' }}>{data?.total ?? '-'}</span>
       <span className="text-[18px] font-medium" style={{ color: '#F56A27' }}>Items</span>
     </div>
 
@@ -123,16 +124,16 @@ const MenuItemsCard: React.FC = () => (
         className="text-[11px] font-medium px-[24px] py-[4px] rounded-[14px] border border-[#F56A27]"
         style={{ background: 'rgba(245, 106, 39, 0.05)', color: '#F56A27' }}
       >
-        6 hidden
+        {data?.hidden ?? 0} hidden
       </span>
       <span className="text-[12px] font-medium" style={{ color: '#979797' }}>
-        +3 since last week
+        {data?.change ? (data.change > 0 ? `+${data.change}` : data.change) : '0'} since last week
       </span>
     </div>
   </div>
 );
 
-const ActiveStoresCard: React.FC = () => (
+const ActiveStoresCard: React.FC<{ data?: DashboardStats['stores'] }> = ({ data }) => (
   <div
     className="flex flex-col items-start rounded-2xl p-5 cursor-pointer relative overflow-hidden transition-all duration-300 w-full min-h-[200px]"
     style={cardBase}
@@ -146,32 +147,34 @@ const ActiveStoresCard: React.FC = () => (
     </div>
 
     <div className="flex items-baseline gap-2 mt-[18px] mb-2 relative z-10">
-      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>2</span>
+      <span className="font-display text-[44px] font-bold leading-none tracking-tight" style={{ color: '#41735D' }}>{data?.total ?? '-'}</span>
       <span className="text-[18px] font-medium" style={{ color: '#41735D' }}>stores</span>
     </div>
 
     <div className="w-full mt-auto pt-1 flex flex-col items-start gap-[6px] relative z-10">
       <div className="flex flex-col items-start gap-[6px] w-full">
-        <div
-          className="flex items-center gap-[8px] text-[11px] font-medium w-full max-w-[110px] py-[3px] px-[12px] rounded-[6px] border border-[#41735D]"
-          style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
-        >
-          <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 2px #41735D' }} />
-          Chennai
-        </div>
-        <div
-          className="flex items-center gap-[8px] text-[11px] font-medium w-full max-w-[110px] py-[3px] px-[12px] rounded-[6px] border border-[#41735D]"
-          style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
-        >
-          <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 2px #41735D' }} />
-          Banglore
-        </div>
+        {(data?.names || []).slice(0, 2).map((name, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-[8px] text-[11px] font-medium w-full max-w-[110px] py-[3px] px-[12px] rounded-[6px] border border-[#41735D]"
+            style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
+          >
+            <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 2px #41735D' }} />
+            {name.split(' - ')[0].split(' — ')[0]}
+          </div>
+        ))}
       </div>
     </div>
   </div>
 );
 
-const RegisteredUsersCard: React.FC = () => (
+const formatNumber = (num: number) => {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num.toString();
+};
+
+const RegisteredUsersCard: React.FC<{ data?: DashboardStats['users'] }> = ({ data }) => (
   <div
     className="flex flex-col items-start rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all duration-[180ms] h-full"
     style={cardBase}
@@ -192,22 +195,27 @@ const RegisteredUsersCard: React.FC = () => (
     </div>
 
     <div className="flex flex-col items-start mt-3 mb-2 flex-grow gap-[6px]">
-      <div className="font-display text-[32px] font-bold leading-none tracking-tight" style={{ color: 'var(--text-primary)' }}>624K</div>
+      <div className="font-display text-[32px] font-bold leading-none tracking-tight" style={{ color: 'var(--text-primary)' }}>
+        {data ? formatNumber(data.total) : '-'}
+      </div>
       <span
         className="text-[10px] font-bold px-[7px] py-[3px] rounded-[20px]"
-        style={{ background: 'var(--green-bg)', color: 'var(--green)' }}
+        style={{ 
+          background: (data?.changePercent || 0) >= 0 ? 'var(--green-bg)' : 'rgba(201,64,64,0.1)', 
+          color: (data?.changePercent || 0) >= 0 ? 'var(--green)' : 'var(--red)' 
+        }}
       >
-        +12.6%
+        {(data?.changePercent || 0) > 0 ? '+' : ''}{data?.changePercent || 0}%
       </span>
     </div>
 
     <div className="w-full mt-auto pt-1">
-      <MiniBarChart color="var(--green)" />
+      <MiniBarChart color={((data?.changePercent || 0) >= 0) ? 'var(--green)' : 'var(--red)'} />
     </div>
   </div>
 );
 
-const PageVisitsCard: React.FC = () => (
+const PageVisitsCard: React.FC<{ data?: DashboardStats['pageVisits'] }> = ({ data }) => (
   <div
     className="flex flex-col items-start rounded-2xl p-4 cursor-pointer relative overflow-hidden transition-all duration-[180ms] h-full"
     style={cardBase}
@@ -227,27 +235,37 @@ const PageVisitsCard: React.FC = () => (
 
     <div className="flex flex-col items-start mt-3 flex-grow gap-2 w-full">
       <div className="flex items-center gap-2">
-        <div className="font-display text-[32px] font-bold leading-none tracking-tight" style={{ color: 'var(--text-primary)' }}>32K</div>
+        <div className="font-display text-[32px] font-bold leading-none tracking-tight" style={{ color: 'var(--text-primary)' }}>
+          {data ? formatNumber(data.total) : '-'}
+        </div>
         <span
           className="text-[10px] font-bold"
-          style={{ color: 'var(--green)' }}
+          style={{ color: (data?.changePercent || 0) >= 0 ? 'var(--green)' : 'var(--red)' }}
         >
-          +12%
+          {(data?.changePercent || 0) > 0 ? '+' : ''}{data?.changePercent || 0}%
         </span>
       </div>
-      <DonutChart value={500} label="Visitors" />
+      <DonutChart value={data?.total || 0} label="Visitors" />
     </div>
   </div>
 );
 
 /* ─── Row Export ──────────────────────────────────────── */
 
-export const StatCardsRow: React.FC = () => (
-  <div className="grid gap-3 md:gap-[14px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 items-stretch">
-    <CategoriesCard />
-    <MenuItemsCard />
-    <ActiveStoresCard />
-    <RegisteredUsersCard />
-    <PageVisitsCard />
-  </div>
-);
+export const StatCardsRow: React.FC = () => {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    dashboardApi.stats().then(res => setStats(res)).catch(console.error);
+  }, []);
+
+  return (
+    <div className="grid gap-3 md:gap-[14px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 items-stretch">
+      <CategoriesCard data={stats?.categories} />
+      <MenuItemsCard data={stats?.menuItems} />
+      <ActiveStoresCard data={stats?.stores} />
+      <RegisteredUsersCard data={stats?.users} />
+      <PageVisitsCard data={stats?.pageVisits} />
+    </div>
+  );
+};

@@ -3,7 +3,22 @@ import { Toggle } from '@/components/ui/Toggle';
 import { StoreDrawer, Store, ExclusiveItem } from '@/components/stores/StoreDrawer';
 import { DeleteModal } from '@/components/categories/DeleteModal';
 
-import { storesApi } from '@/services/api';
+import { storesApi, menuItemsApi, categoriesApi } from '@/services/api';
+
+/* ─── Helpers ─── */
+const API_BASE_URL = (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_BASE_URL || '';
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  try {
+    const parsed = new URL(url);
+    if ((parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') && API_BASE_URL) {
+      // Re-map to the API server since Nginx doesn't expose /uploads at the root
+      return `${API_BASE_URL}${parsed.pathname.replace(/^\/api/, '')}${parsed.search}`;
+    }
+  } catch(e) {}
+  if (url.startsWith('http')) return url;
+  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url.replace(/^\/api/, '')}`;
+};
 
 const VISIT_DATA = {
   chennai: { total: '4,891', change: '↑ 12% vs last week', bars: [55, 65, 80, 60, 90, 100, 85] },
@@ -84,7 +99,9 @@ export const ManageStoresPage: React.FC = () => {
   const [drawerMode, setDrawerMode] = useState<'add' | 'edit'>('add');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [tempClosed, setTempClosed] = useState(false);
+  const [addExclusiveOpen, setAddExclusiveOpen] = useState(false);
   const [meta, setMeta] = useState<any>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchStores = async () => {
     try {
@@ -93,7 +110,6 @@ export const ManageStoresPage: React.FC = () => {
       setMeta(res.meta);
       if (res.data.length > 0 && !selectedId) {
         setSelectedId(res.data[0].id);
-        setTempClosed(res.data[0].temporarilyClosed);
       }
     } catch (e) {
       console.error(e);
@@ -104,7 +120,15 @@ export const ManageStoresPage: React.FC = () => {
     fetchStores();
   }, []);
 
+  // Sync tempClosed whenever the selected store changes (including after fetches)
   const selectedStore = stores.find(s => s.id === selectedId) || stores[0];
+  useEffect(() => {
+    if (selectedStore) {
+      setTempClosed(selectedStore.temporarilyClosed);
+    }
+  }, [selectedStore?.id, selectedStore?.temporarilyClosed]);
+
+
   const showOnWebsite = selectedStore?.enabled ?? false;
   const exclusives = selectedStore?.exclusiveItems ?? [];
   const gallery = selectedStore?.gallery ?? [];
@@ -117,8 +141,11 @@ export const ManageStoresPage: React.FC = () => {
       if (drawerMode === 'edit' && selectedStore) {
         await storesApi.update(selectedStore.id, data as any);
       } else {
-        await storesApi.create(data as any);
+        const res = await storesApi.create(data as any);
+        // Select the newly created store
+        if (res?.data?.id) setSelectedId(res.data.id);
       }
+      setDrawerOpen(false);
       fetchStores();
     } catch (e) {
       console.error('Failed to save store', e);
@@ -170,14 +197,23 @@ export const ManageStoresPage: React.FC = () => {
   };
 
   /* ── Gallery CRUD ── */
-  const addGalleryPhoto = async (emoji: string) => {
-    // Note: API expects a file, this is mock logic for the UI emoji placeholder
-    // In a real implementation you would use storesApi.addGalleryPhoto(storeId, file)
-    setStores(prev => prev.map(s =>
-      s.id === selectedId
-        ? { ...s, gallery: [...s.gallery, emoji] }
-        : s
-    ));
+  const addGalleryPhoto = () => {
+    // Trigger the hidden file input
+    galleryInputRef.current?.click();
+  };
+
+  const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedStore) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      await storesApi.addGalleryPhoto(selectedStore.id, file);
+      fetchStores();
+    } catch (err) {
+      console.error('Failed to upload gallery photo', err);
+    }
+    // Reset the input so the same file can be re-selected if needed
+    e.target.value = '';
   };
 
   const removeGalleryPhoto = async (index: number) => {
@@ -288,25 +324,33 @@ export const ManageStoresPage: React.FC = () => {
             {/* ── Location & Contact ── */}
             <InfoCard title="Location & contact" icon={<MapPinIcon />} onEdit={handleEdit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-[10px]">
-                <DetailItem label="Full address" value={selectedStore.address} fullWidth />
-                <DetailItem label="Phone" value={selectedStore.phone} />
-                <DetailItem label="WhatsApp" value={selectedStore.whatsapp || '—'} />
-                <DetailItem label="Email" value={selectedStore.email || '—'} />
-                <DetailItem label="Google Maps link" value={selectedStore.mapsLink?.replace('https://', '')} isLink />
+                <DetailItem label="Full address" value={selectedStore.address || ''} fullWidth />
+                <DetailItem label="Phone" value={selectedStore.phone || ''} href={selectedStore.phone ? `tel:${selectedStore.phone}` : undefined} />
+                <DetailItem label="WhatsApp" value={selectedStore.whatsapp || '—'} href={selectedStore.whatsapp ? `https://wa.me/${selectedStore.whatsapp.replace(/[^0-9]/g, '')}` : undefined} />
+                <DetailItem label="Email" value={selectedStore.email || '—'} href={selectedStore.email ? `mailto:${selectedStore.email}` : undefined} />
+                <DetailItem label="Google Maps link" value={selectedStore.mapsLink?.replace('https://', '') || '—'} isLink href={selectedStore.mapsLink} />
               </div>
 
-              {/* Map embed placeholder */}
-              <div className="mt-[14px] w-full h-[180px] rounded-[10px] relative overflow-hidden flex flex-col items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg,#e8f5e9,#c8e6c9)', border: '1px solid var(--border)' }}>
-                <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(45,134,83,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(45,134,83,.08) 1px,transparent 1px)', backgroundSize: '24px 24px' }} />
-                <div className="w-10 h-10 rounded-full flex items-center justify-center z-[1]" style={{ background: 'var(--orange)', boxShadow: '0 4px 12px rgba(212,114,42,0.4)' }}>
-                  <MapPinIcon size={20} />
+              {/* Map embed */}
+              {selectedStore.mapsEmbed ? (
+                <div 
+                  className="mt-[14px] w-full h-[180px] rounded-[10px] relative overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-none" 
+                  style={{ border: '1px solid var(--border)' }}
+                  dangerouslySetInnerHTML={{ __html: selectedStore.mapsEmbed }} 
+                />
+              ) : (
+                <div className="mt-[14px] w-full h-[180px] rounded-[10px] relative overflow-hidden flex flex-col items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(135deg,#e8f5e9,#c8e6c9)', border: '1px solid var(--border)' }}>
+                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(45,134,83,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(45,134,83,.08) 1px,transparent 1px)', backgroundSize: '24px 24px' }} />
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center z-[1]" style={{ background: 'var(--orange)', boxShadow: '0 4px 12px rgba(212,114,42,0.4)' }}>
+                    <MapPinIcon size={20} />
+                  </div>
+                  <div className="text-xs font-semibold z-[1]" style={{ color: 'var(--text-secondary)' }}>Google Maps embed — {selectedStore.address?.split(',')[0]}</div>
                 </div>
-                <div className="text-xs font-semibold z-[1]" style={{ color: 'var(--text-secondary)' }}>Google Maps embed — {selectedStore.address?.split(',')[0]}</div>
-              </div>
+              )}
               <div className="flex gap-2 mt-[10px]">
-                <MapBtn label="Update embed link" icon={<EditIcon />} />
-                <MapBtn label="Open in Maps" icon={<ExternalIcon />} />
+                <MapBtn label="Update embed link" icon={<EditIcon />} onClick={handleEdit} />
+                <MapBtn label="Open in Maps" icon={<ExternalIcon />} onClick={() => { if (selectedStore.mapsLink) window.open(selectedStore.mapsLink, '_blank'); }} disabled={!selectedStore.mapsLink} />
               </div>
             </InfoCard>
 
@@ -340,9 +384,9 @@ export const ManageStoresPage: React.FC = () => {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-[10px]">
-                <ManagerBtn label="Call" icon={<PhoneIcon size={12} />} />
-                <ManagerBtn label="WhatsApp" icon={<MessageIcon size={12} />} variant="whatsapp" />
-                <ManagerBtn label="Email" icon={<MailIcon size={12} />} />
+                <ManagerBtn label="Call" icon={<PhoneIcon size={12} />} href={selectedStore.phone ? `tel:${selectedStore.phone}` : undefined} />
+                <ManagerBtn label="WhatsApp" icon={<MessageIcon size={12} />} variant="whatsapp" href={selectedStore.whatsapp ? `https://wa.me/${selectedStore.whatsapp.replace(/[^0-9]/g, '')}` : undefined} />
+                <ManagerBtn label="Email" icon={<MailIcon size={12} />} href={selectedStore.email ? `mailto:${selectedStore.email}` : undefined} />
               </div>
             </InfoCard>
 
@@ -370,13 +414,7 @@ export const ManageStoresPage: React.FC = () => {
                 {/* Add exclusive */}
                 <div className="flex flex-col items-center justify-center gap-1 px-3 py-[14px] rounded-[10px] cursor-pointer transition-all"
                   style={{ background: 'var(--orange-bg)', border: '1.5px dashed rgba(212,114,42,0.3)' }}
-                  onClick={() => {
-                    const emojis = ['🍔', '🌮', '🍕', '🥪', '🧆', '🍜', '🥗', '🍿'];
-                    const names = ['Spicy Wrap', 'Cheese Burst', 'Tandoori Roll', 'Paneer Tikka', 'Veg Delight', 'Double Crunch', 'Smoky BBQ', 'Masala Fries'];
-                    const idx = Math.floor(Math.random() * emojis.length);
-                    const price = `₹${Math.floor(Math.random() * 150) + 99}`;
-                    addExclusiveItem({ emoji: emojis[idx], name: names[idx], price });
-                  }}
+                  onClick={() => setAddExclusiveOpen(true)}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--orange-light)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,114,42,0.5)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,114,42,0.3)'; }}>
                   <PlusIcon size={18} />
@@ -389,11 +427,16 @@ export const ManageStoresPage: React.FC = () => {
             <InfoCard title="Store photos" icon={<ImageIcon />} editLabel="Manage gallery" onEdit={() => { }}>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {gallery.map((g, i) => (
-                  <div key={i} className="w-20 h-20 rounded-[9px] flex-shrink-0 flex items-center justify-center text-[28px] cursor-pointer transition-all relative overflow-hidden group"
+                  <div key={i} className="w-20 h-20 rounded-[9px] flex-shrink-0 relative overflow-hidden group cursor-pointer"
                     style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}>
-                    {g}
+                    {/* Render URL images or emoji text */}
+                    {g.startsWith('http') || g.startsWith('/') || g.startsWith('uploads/') ? (
+                      <img src={getImageUrl(g)} alt={`Store photo ${i + 1}`} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[28px]">{g}</div>
+                    )}
                     {/* Hover overlay with remove */}
                     <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(212,114,42,0.15)' }}>
                       <button onClick={(e) => { e.stopPropagation(); removeGalleryPhoto(i); }}
@@ -403,17 +446,16 @@ export const ManageStoresPage: React.FC = () => {
                     </div>
                   </div>
                 ))}
+                {/* Hidden file input for gallery upload */}
+                <input ref={galleryInputRef} type="file" accept="image/*" hidden onChange={handleGalleryFileChange} />
                 {/* Add thumb */}
                 <div className="w-20 h-20 rounded-[9px] flex-shrink-0 flex flex-col items-center justify-center gap-[3px] cursor-pointer transition-all"
                   style={{ background: 'var(--orange-bg)', border: '1.5px dashed rgba(212,114,42,0.35)' }}
-                  onClick={() => {
-                    const emojis = ['📸', '🍽️', '🎨', '🎵', '🌺', '🏖️', '🎪', '🍰'];
-                    addGalleryPhoto(emojis[Math.floor(Math.random() * emojis.length)]);
-                  }}
+                  onClick={addGalleryPhoto}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--orange-light)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,114,42,0.6)'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,114,42,0.35)'; }}>
                   <PlusIcon size={18} />
-                  <span className="text-[9px] font-semibold" style={{ color: 'var(--orange)' }}>Add</span>
+                  <span className="text-[9px] font-semibold" style={{ color: 'var(--orange)' }}>Upload</span>
                 </div>
               </div>
             </InfoCard>
@@ -463,10 +505,10 @@ export const ManageStoresPage: React.FC = () => {
             {/* ── Quick Contact ── */}
             <InfoCard title="Quick contact" icon={<PhoneIcon />}>
               <div className="flex flex-col gap-2">
-                <QuickContactRow icon={<PhoneIcon />} iconBg="var(--blue-bg)" iconColor="var(--blue)" label="Call store" value={selectedStore.phone} />
-                <QuickContactRow icon={<MessageIcon />} iconBg="rgba(37,211,102,0.1)" iconColor="#128C7E" label="WhatsApp" value={selectedStore.whatsapp || '—'} />
-                <QuickContactRow icon={<MapPinIcon />} iconBg="var(--red-bg)" iconColor="var(--red)" label="Get directions" value="Google Maps" />
-                <QuickContactRow icon={<MailIcon />} iconBg="var(--orange-light)" iconColor="var(--orange)" label="Email store" value={selectedStore.email || '—'} />
+                <QuickContactRow icon={<PhoneIcon />} iconBg="var(--blue-bg)" iconColor="var(--blue)" label="Call store" value={selectedStore.phone} href={selectedStore.phone ? `tel:${selectedStore.phone}` : undefined} />
+                <QuickContactRow icon={<MessageIcon />} iconBg="rgba(37,211,102,0.1)" iconColor="#128C7E" label="WhatsApp" value={selectedStore.whatsapp || '—'} href={selectedStore.whatsapp ? `https://wa.me/${selectedStore.whatsapp.replace(/[^0-9]/g, '')}` : undefined} />
+                <QuickContactRow icon={<MapPinIcon />} iconBg="var(--red-bg)" iconColor="var(--red)" label="Get directions" value="Google Maps" href={selectedStore.mapsLink || undefined} />
+                <QuickContactRow icon={<MailIcon />} iconBg="var(--orange-light)" iconColor="var(--orange)" label="Email store" value={selectedStore.email || '—'} href={selectedStore.email ? `mailto:${selectedStore.email}` : undefined} />
               </div>
             </InfoCard>
 
@@ -518,8 +560,31 @@ export const ManageStoresPage: React.FC = () => {
       )}
 
       {/* ═══ MODALS ═══ */}
-      <StoreDrawer open={drawerOpen} mode={drawerMode} store={drawerMode === 'edit' ? selectedStore : null} onClose={() => setDrawerOpen(false)} onSave={handleSave} />
+      <StoreDrawer 
+        open={drawerOpen} 
+        mode={drawerMode} 
+        store={drawerMode === 'edit' ? selectedStore : null} 
+        onClose={() => setDrawerOpen(false)} 
+        onSave={handleSave} 
+        onGalleryUpload={async (file) => {
+          if (!selectedStore) return;
+          try {
+            await storesApi.addGalleryPhoto(selectedStore.id, file);
+            fetchStores();
+          } catch (err) {
+            console.error('Failed to upload drawer photo', err);
+          }
+        }}
+      />
       <DeleteModal open={deleteModalOpen} categoryName={selectedStore?.name || ''} onClose={() => setDeleteModalOpen(false)} onConfirm={handleDelete} />
+      {selectedStore && (
+        <AddExclusiveModal 
+          open={addExclusiveOpen} 
+          storeName={selectedStore.name}
+          onClose={() => setAddExclusiveOpen(false)} 
+          onAdd={addExclusiveItem} 
+        />
+      )}
     </div>
   );
 };
@@ -570,26 +635,30 @@ const InfoCard: React.FC<InfoCardProps> = ({ title, icon, editLabel = 'Edit', on
   </div>
 );
 
-const DetailItem: React.FC<{ label: string; value: string; fullWidth?: boolean; isLink?: boolean }> = ({ label, value, fullWidth, isLink }) => (
-  <div className={fullWidth ? 'col-span-1 sm:col-span-2' : ''}>
-    <div className="text-[10px] uppercase tracking-[.05em] mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
-    <div className="text-[13px] font-medium leading-[1.5]" style={{ color: isLink ? 'var(--blue)' : 'var(--text-primary)', cursor: isLink ? 'pointer' : 'default' }}>{value}</div>
-  </div>
-);
+const DetailItem: React.FC<{ label: string; value: string; fullWidth?: boolean; isLink?: boolean; href?: string }> = ({ label, value, fullWidth, isLink, href }) => {
+  const content = <div className="text-[13px] font-medium leading-[1.5]" style={{ color: isLink ? 'var(--blue)' : 'var(--text-primary)', cursor: isLink || href ? 'pointer' : 'default' }}>{value}</div>;
+  return (
+    <div className={fullWidth ? 'col-span-1 sm:col-span-2' : ''}>
+      <div className="text-[10px] uppercase tracking-[.05em] mb-1" style={{ color: 'var(--text-muted)' }}>{label}</div>
+      {href ? <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="no-underline block">{content}</a> : content}
+    </div>
+  );
+};
 
-const MapBtn: React.FC<{ label: string; icon: React.ReactNode }> = ({ label, icon }) => (
-  <button className="flex items-center gap-[5px] px-3 py-[6px] rounded-[7px] text-[11px] font-semibold cursor-pointer transition-all bg-transparent"
-    style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+const MapBtn: React.FC<{ label: string; icon: React.ReactNode; onClick?: () => void; disabled?: boolean }> = ({ label, icon, onClick, disabled }) => (
+  <button onClick={onClick} disabled={disabled} className="flex items-center gap-[5px] px-3 py-[6px] rounded-[7px] text-[11px] font-semibold cursor-pointer transition-all bg-transparent"
+    style={{ border: '1px solid var(--border)', color: 'var(--text-secondary)', opacity: disabled ? 0.6 : 1, pointerEvents: disabled ? 'none' : 'auto' }}
     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}>
     {icon} {label}
   </button>
 );
 
-const ManagerBtn: React.FC<{ label: string; icon: React.ReactNode; variant?: 'default' | 'whatsapp' }> = ({ label, icon, variant = 'default' }) => {
+const ManagerBtn: React.FC<{ label: string; icon: React.ReactNode; variant?: 'default' | 'whatsapp'; href?: string }> = ({ label, icon, variant = 'default', href }) => {
   const isWA = variant === 'whatsapp';
+  const Component = href ? 'a' : 'button';
   return (
-    <button className="flex items-center gap-[5px] px-3 py-[6px] rounded-[7px] text-[11px] font-semibold cursor-pointer transition-all"
+    <Component href={href} target={href?.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="flex items-center gap-[5px] px-3 py-[6px] rounded-[7px] text-[11px] font-semibold cursor-pointer transition-all no-underline"
       style={{
         border: `1px solid ${isWA ? 'rgba(37,211,102,0.3)' : 'var(--border)'}`,
         background: isWA ? 'rgba(37,211,102,0.06)' : 'var(--bg-card2)',
@@ -598,18 +667,140 @@ const ManagerBtn: React.FC<{ label: string; icon: React.ReactNode; variant?: 'de
       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = isWA ? 'rgba(37,211,102,0.5)' : 'var(--border-strong)'; }}
       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = isWA ? 'rgba(37,211,102,0.3)' : 'var(--border)'; }}>
       {icon} {label}
-    </button>
+    </Component>
   );
 };
 
-const QuickContactRow: React.FC<{ icon: React.ReactNode; iconBg: string; iconColor: string; label: string; value: string }> = ({ icon, iconBg, iconColor, label, value }) => (
-  <div className="flex items-center gap-[10px] px-3 py-[9px] rounded-lg cursor-pointer transition-all"
-    style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)' }}
-    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
-    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}>
-    <div className="w-7 h-7 rounded-[7px] flex items-center justify-center flex-shrink-0" style={{ background: iconBg, color: iconColor }}>{icon}</div>
-    <div className="text-xs font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>{label}</div>
-    <div className="text-[11px] hidden sm:block" style={{ color: 'var(--text-muted)' }}>{value}</div>
-    <span style={{ color: 'var(--text-muted)' }}><ChevronRightIcon /></span>
-  </div>
-);
+const QuickContactRow: React.FC<{ icon: React.ReactNode; iconBg: string; iconColor: string; label: string; value: string; href?: string; onClick?: () => void }> = ({ icon, iconBg, iconColor, label, value, href, onClick }) => {
+  const Component = href ? 'a' : 'div';
+  return (
+    <Component href={href} onClick={onClick} target={href?.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="flex items-center gap-[10px] px-3 py-[9px] rounded-lg cursor-pointer transition-all no-underline"
+      style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}>
+      <div className="w-7 h-7 rounded-[7px] flex items-center justify-center flex-shrink-0" style={{ background: iconBg, color: iconColor }}>{icon}</div>
+      <div className="text-xs font-semibold flex-1" style={{ color: 'var(--text-primary)' }}>{label}</div>
+      <div className="text-[11px] hidden sm:block" style={{ color: 'var(--text-muted)' }}>{value}</div>
+      <span style={{ color: 'var(--text-muted)' }}><ChevronRightIcon /></span>
+    </Component>
+  );
+};
+
+const AddExclusiveModal: React.FC<{ open: boolean; storeName: string; onClose: () => void; onAdd: (item: ExclusiveItem) => void }> = ({ open, storeName, onClose, onAdd }) => {
+  const [items, setItems] = useState<{ id: string; name: string; emoji: string; price: number }[]>([]);
+  const [categories, setCategories] = useState<{ id: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string>('custom');
+  
+  const [customEmoji, setCustomEmoji] = useState('🌮');
+  const [customName, setCustomName] = useState('');
+  const [price, setPrice] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setLoading(true);
+      setCustomName(''); setPrice(''); setSelectedId('custom');
+      Promise.all([
+        menuItemsApi.list(),
+        categoriesApi.list()
+      ]).then(([itemsRes, catsRes]) => {
+        setItems(itemsRes.data);
+        setCategories(catsRes.data);
+      }).catch(console.error).finally(() => setLoading(false));
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const handleSave = async () => {
+    let finalName = customName;
+    let finalEmoji = customEmoji;
+    
+    if (selectedId !== 'custom') {
+      const selected = items.find(i => i.id === selectedId);
+      if (selected) {
+        finalName = selected.name;
+        finalEmoji = selected.emoji;
+      }
+    } else {
+      try {
+        const bgColors = ['#FFF3E0', '#E3F2FD', '#FFF8E1', '#FCE4EC', '#F3E5F5', '#FFFDE7', '#E8F5E9', '#FBE9E7'];
+        const numPrice = parseFloat(price.replace(/[^0-9.]/g, '')) || 0;
+        await menuItemsApi.create({
+          name: customName,
+          emoji: customEmoji || '🌮',
+          price: numPrice,
+          categoryId: categories.length > 0 ? categories[0].id : '',
+          bgColor: bgColors[Math.floor(Math.random() * bgColors.length)],
+          isVeg: true,
+          visible: true,
+          stores: [storeName],
+          badges: []
+        });
+      } catch(e) {
+        console.error("Failed to automatically create global menu item", e);
+      }
+    }
+    
+    if (!finalName || !price) return;
+    onAdd({ name: finalName, emoji: finalEmoji, price: price.startsWith('₹') || price.startsWith('$') ? price : `₹${price}` });
+    onClose();
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-[#1C0F05]/35 z-[100] transition-opacity" onClick={onClose} />
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] z-[101] rounded-xl shadow-2xl p-5"
+        style={{ background: 'var(--bg-card)', animation: 'slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) both' }}>
+        <h3 className="font-display font-bold text-lg mb-1" style={{ color: 'var(--text-primary)' }}>Add Exclusive Item</h3>
+        <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Exclusive to {storeName}</p>
+        
+        <div className="mb-4">
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>From Menu</label>
+          <select 
+            value={selectedId} 
+            onChange={e => {
+              const val = e.target.value;
+              setSelectedId(val);
+              if (val !== 'custom') {
+                const selectedItem = items.find(i => i.id === val);
+                if (selectedItem) setPrice(`₹${selectedItem.price}`);
+              } else {
+                setPrice('');
+              }
+            }}
+            disabled={loading}
+            className="w-full px-3 py-2 rounded-lg text-xs outline-none"
+            style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+          >
+            <option value="custom">-- Create Custom Item --</option>
+            {items.map(i => <option key={i.id} value={i.id}>{i.emoji} {i.name}</option>)}
+          </select>
+        </div>
+
+        {selectedId === 'custom' && (
+          <div className="grid grid-cols-[3fr_1fr] gap-3 mb-4">
+            <div>
+              <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Name</label>
+              <input value={customName} onChange={e => setCustomName(e.target.value)} placeholder="Spicy Wrap" className="w-full px-3 py-2 rounded-lg text-xs outline-none" style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Emoji</label>
+              <input value={customEmoji} onChange={e => setCustomEmoji(e.target.value)} placeholder="🌭" className="w-full px-3 py-2 rounded-lg text-xs outline-none text-center" style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+            </div>
+          </div>
+        )}
+
+        <div className="mb-5">
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>Store Price</label>
+          <input value={price} onChange={e => setPrice(e.target.value)} disabled={selectedId !== 'custom'} placeholder="₹149" className="w-full px-3 py-2 rounded-lg text-xs outline-none" style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', color: 'var(--text-primary)', opacity: selectedId !== 'custom' ? 0.6 : 1 }} />
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer" style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancel</button>
+          <button onClick={handleSave} disabled={(!customName && selectedId === 'custom') || !price} className="flex-1 px-4 py-2 rounded-lg text-xs font-bold text-white cursor-pointer disabled:opacity-50" style={{ background: 'var(--orange)', border: 'none' }}>Add Item</button>
+        </div>
+      </div>
+    </>
+  );
+};

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
-import { storesData } from '@/services/mockData';
+import { storesApi, type StoreDTO } from '@/services/api';
 
 const MapPinIcon = () => (
   <svg viewBox="0 0 24 24" className="w-[14px] h-[14px]" style={{ fill: 'var(--orange)' }}>
@@ -8,29 +8,37 @@ const MapPinIcon = () => (
   </svg>
 );
 
-export const StoreStatus: React.FC = () => (
-  <Card>
-    <CardHeader
-      title={<><MapPinIcon /> Store status</>}
-      right={
-        <span
-          className="text-[11px] font-semibold cursor-pointer hover:underline"
-          style={{ color: 'var(--red)' }}
-          onClick={() => { window.location.hash = 'manage-stores'; }}
-        >
-          Edit →
-        </span>
-      }
-    />
-    <CardBody>
-      <div className="flex flex-col gap-2">
-        {storesData.map(store => (
+export const StoreStatus: React.FC = () => {
+  const [stores, setStores] = useState<StoreDTO[]>([]);
+
+  useEffect(() => {
+    storesApi.list().then(res => setStores(res.data)).catch(console.error);
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader
+        title={<><MapPinIcon /> Store status</>}
+        right={
+          <span
+            className="text-[11px] font-semibold cursor-pointer hover:underline"
+            style={{ color: 'var(--red)' }}
+            onClick={() => { window.location.hash = 'manage-stores'; }}
+          >
+            Edit →
+          </span>
+        }
+      />
+      <CardBody>
+        <div className="flex flex-col gap-2">
+        {stores.map(store => (
           <div
             key={store.id}
             className="flex items-start gap-[10px] px-[14px] py-3 rounded-[10px] transition-all cursor-pointer"
             style={{
               background: 'var(--bg-card2)',
               border: '1px solid var(--border)',
+              opacity: store.enabled ? 1 : 0.6
             }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement;
@@ -48,8 +56,8 @@ export const StoreStatus: React.FC = () => (
               className="rounded-full flex-shrink-0 mt-[5px]"
               style={{
                 width: 9, height: 9,
-                background: store.status === 'open' ? 'var(--green)' : 'var(--red)',
-                boxShadow: store.status === 'open'
+                background: store.enabled ? 'var(--green)' : 'var(--red)',
+                boxShadow: store.enabled
                   ? '0 0 0 3px rgba(45,134,83,.15)'
                   : '0 0 0 3px rgba(201,64,64,.15)',
               }}
@@ -59,17 +67,20 @@ export const StoreStatus: React.FC = () => (
                 {store.name}
               </div>
               <div className="text-[11px] mt-[3px] leading-[1.5]" style={{ color: 'var(--text-muted)' }}>
-                {store.address}
+                {store.address} - {store.city}
               </div>
               <div className="text-[11px] mt-1 font-semibold" style={{ color: 'var(--orange)' }}>
-                {store.hours}
+                {store.enabled ? 'Open' : 'Closed'}
               </div>
               <div className="flex gap-[6px] mt-2">
                 <span
                   className="text-[10px] px-2 py-[3px] rounded-[6px] font-semibold"
-                  style={{ background: 'var(--green-bg)', color: 'var(--green)' }}
+                  style={{ 
+                    background: store.enabled ? 'var(--green-bg)' : 'rgba(201,64,64,0.1)', 
+                    color: store.enabled ? 'var(--green)' : 'var(--red)' 
+                  }}
                 >
-                  Open now
+                  {store.enabled ? 'Open now' : 'Closed'}
                 </span>
                 <span
                   className="text-[10px] px-2 py-[3px] rounded-[6px] font-semibold cursor-pointer"
@@ -93,3 +104,4 @@ export const StoreStatus: React.FC = () => (
     </CardBody>
   </Card>
 );
+};

@@ -153,10 +153,10 @@ export const CategoriesPage: React.FC = () => {
     }
 
     if (filter === 'visible') result = result.filter(c => c.visible);
-    if (filter === 'hidden')  result = result.filter(c => !c.visible);
+    if (filter === 'hidden') result = result.filter(c => !c.visible);
 
-    if (sortBy === 'name')   result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-    if (sortBy === 'items')  result = [...result].sort((a, b) => b.itemCount - a.itemCount);
+    if (sortBy === 'name') result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === 'items') result = [...result].sort((a, b) => b.itemCount - a.itemCount);
     if (sortBy === 'recent') result = [...result]; // already sorted by createdAt from API for 'recent'
     // 'order' → default displayOrder from API
 
@@ -173,7 +173,7 @@ export const CategoriesPage: React.FC = () => {
     setMeta(prev => ({
       ...prev,
       visible: newVisible ? prev.visible + 1 : prev.visible - 1,
-      hidden:  newVisible ? prev.hidden - 1  : prev.hidden + 1,
+      hidden: newVisible ? prev.hidden - 1 : prev.hidden + 1,
     }));
     try {
       await categoriesApi.update(id, { visible: newVisible });
@@ -183,7 +183,7 @@ export const CategoriesPage: React.FC = () => {
       setMeta(prev => ({
         ...prev,
         visible: newVisible ? prev.visible - 1 : prev.visible + 1,
-        hidden:  newVisible ? prev.hidden + 1  : prev.hidden - 1,
+        hidden: newVisible ? prev.hidden + 1 : prev.hidden - 1,
       }));
       showToast('Failed to update visibility', 'error');
     }
@@ -216,7 +216,7 @@ export const CategoriesPage: React.FC = () => {
         ...prev,
         total: prev.total - 1,
         visible: deletingCategory.visible ? prev.visible - 1 : prev.visible,
-        hidden:  !deletingCategory.visible ? prev.hidden - 1 : prev.hidden,
+        hidden: !deletingCategory.visible ? prev.hidden - 1 : prev.hidden,
       }));
       showToast(`"${deletingCategory.name}" deleted`, 'success');
     } catch (err) {
@@ -258,7 +258,7 @@ export const CategoriesPage: React.FC = () => {
           ...prev,
           total: prev.total + 1,
           visible: created.visible ? prev.visible + 1 : prev.visible,
-          hidden:  !created.visible ? prev.hidden + 1 : prev.hidden,
+          hidden: !created.visible ? prev.hidden + 1 : prev.hidden,
         }));
         showToast(`"${created.name}" created`, 'success');
       } catch (err) {
@@ -348,9 +348,9 @@ export const CategoriesPage: React.FC = () => {
 
         {/* Filter buttons */}
         {([
-          { key: 'all',     label: 'All',     icon: <EyeIcon /> },
+          { key: 'all', label: 'All', icon: <EyeIcon /> },
           { key: 'visible', label: 'Visible', icon: <EyeIcon /> },
-          { key: 'hidden',  label: 'Hidden',  icon: <EyeOffIcon /> },
+          { key: 'hidden', label: 'Hidden', icon: <EyeOffIcon /> },
         ] as const).map(f => (
           <button
             key={f.key}
@@ -383,9 +383,9 @@ export const CategoriesPage: React.FC = () => {
 
       {/* ── Section Label ── */}
       <div className="text-[11px] font-bold uppercase tracking-[.08em] mt-1" style={{ color: 'var(--text-muted)' }}>
-        {filter === 'all'     ? `All categories (${filteredCategories.length})` :
-         filter === 'visible' ? `Visible categories (${filteredCategories.length})` :
-                                `Hidden categories (${filteredCategories.length})`}
+        {filter === 'all' ? `All categories (${filteredCategories.length})` :
+          filter === 'visible' ? `Visible categories (${filteredCategories.length})` :
+            `Hidden categories (${filteredCategories.length})`}
       </div>
 
       {/* ── Category Grid ── */}
@@ -453,9 +453,9 @@ interface StatCardProps {
 
 const iconColors: Record<string, { bg: string; color: string }> = {
   'ssi-orange': { bg: 'var(--orange-light)', color: 'var(--orange)' },
-  'ssi-green':  { bg: 'var(--green-bg)',     color: 'var(--green)'  },
-  'ssi-red':    { bg: 'var(--red-bg)',        color: 'var(--red)'    },
-  'ssi-blue':   { bg: 'var(--blue-bg)',       color: 'var(--blue)'   },
+  'ssi-green': { bg: 'var(--green-bg)', color: 'var(--green)' },
+  'ssi-red': { bg: 'var(--red-bg)', color: 'var(--red)' },
+  'ssi-blue': { bg: 'var(--blue-bg)', color: 'var(--blue)' },
 };
 
 const StatCard: React.FC<StatCardProps> = ({ icon, iconClass, value, label }) => {

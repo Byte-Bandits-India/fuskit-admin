@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { RangeTabs } from '@/components/ui/RangeTabs';
+import { analyticsApi, type PageVisitsResponse } from '@/services/api';
 
 const ChartIcon = () => (
   <svg viewBox="0 0 24 24" className="w-[14px] h-[14px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--orange)' }}>
@@ -18,8 +19,24 @@ const dataPoints = [
 ];
 
 export const PageVisitsChart: React.FC = () => {
+  const [data, setData] = useState<PageVisitsResponse | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; data: typeof dataPoints[0] } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    analyticsApi.pageVisits().then(res => setData(res)).catch(console.error);
+  }, []);
+
+  const activeDataPoints = data?.series ? data.series.map((s, i) => {
+    const spacing = 400 / (Math.max(data.series.length - 1, 1));
+    const maxVisits = Math.max(...data.series.map(d => d.visits), 100);
+    return {
+      x: i * spacing,
+      y: 130 - ((s.visits / maxVisits) * 100),
+      day: s.day,
+      visits: s.visits
+    };
+  }) : dataPoints;
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
@@ -28,9 +45,9 @@ export const PageVisitsChart: React.FC = () => {
     const mouseX = ((e.clientX - rect.left) / rect.width) * 400;
 
     // Find closest data point
-    let closest = dataPoints[0];
+    let closest = activeDataPoints[0];
     let minDist = Infinity;
-    for (const pt of dataPoints) {
+    for (const pt of activeDataPoints) {
       const dist = Math.abs(pt.x - mouseX);
       if (dist < minDist) {
         minDist = dist;
@@ -57,10 +74,12 @@ export const PageVisitsChart: React.FC = () => {
         {/* Summary */}
         <div className="flex items-end justify-between mb-3">
           <div>
-            <div className="font-display text-[26px] font-bold" style={{ color: 'var(--text-primary)' }}>8,342</div>
+            <div className="font-display text-[26px] font-bold" style={{ color: 'var(--text-primary)' }}>{data?.total?.toLocaleString() ?? '8,342'}</div>
             <div className="text-[10px] mt-[2px]" style={{ color: 'var(--text-muted)' }}>Total visits · last 7 days</div>
           </div>
-          <div className="text-[11px] font-bold" style={{ color: 'var(--green)' }}>↑ 18% vs prev period</div>
+          <div className="text-[11px] font-bold" style={{ color: (data?.changePercent || 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+            {(data?.changePercent || 0) > 0 ? '↑' : '↓'} Math.abs(data?.changePercent || 0)% vs prev period
+          </div>
         </div>
 
         {/* Chart area */}
@@ -90,7 +109,7 @@ export const PageVisitsChart: React.FC = () => {
               className="anim-fade"
               fill="url(#areaGradLight)"
               opacity={0.8}
-              d="M0,95 C35,88 55,72 85,58 C110,44 130,78 165,62 C200,46 220,26 255,32 C290,38 310,56 345,42 C368,32 388,18 400,14 L400,120 L0,120 Z"
+              d={`M0,130 ${activeDataPoints.map((pt, i) => i === 0 ? `L${pt.x},${pt.y}` : `L${pt.x},${pt.y}`).join(' ')} L400,130 Z`}
             />
             <path
               className="anim-line"
@@ -99,11 +118,11 @@ export const PageVisitsChart: React.FC = () => {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M0,95 C35,88 55,72 85,58 C110,44 130,78 165,62 C200,46 220,26 255,32 C290,38 310,56 345,42 C368,32 388,18 400,14"
+              d={`M${activeDataPoints.map(pt => `${pt.x},${pt.y}`).join(' L')}`}
             />
 
             {/* Data point circles */}
-            {dataPoints.map((pt, i) => (
+            {activeDataPoints.map((pt, i) => (
               <circle
                 key={i}
                 cx={pt.x}
@@ -150,8 +169,8 @@ export const PageVisitsChart: React.FC = () => {
           )}
 
           <div className="flex justify-between px-[2px] pt-1">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
-              <span key={d} className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{d}</span>
+            {activeDataPoints.map(d => (
+              <span key={d.day} className="text-[9px]" style={{ color: 'var(--text-muted)' }}>{d.day}</span>
             ))}
           </div>
         </div>

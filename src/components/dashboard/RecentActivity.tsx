@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
-import { recentActivity } from '@/services/mockData';
+import { activityApi, type ActivityItemDTO } from '@/services/api';
 import type { ActivityColor } from '@/types';
 
 const ClockIcon = () => (
@@ -18,17 +18,25 @@ const colorMap: Record<ActivityColor, string> = {
   blue:    'var(--blue)',
 };
 
-export const RecentActivity: React.FC = () => (
-  <Card>
-    <CardHeader title={<><ClockIcon /> Recent activity</>} />
-    <CardBody>
-      <div>
-        {recentActivity.map((item, idx) => (
+export const RecentActivity: React.FC = () => {
+  const [activities, setActivities] = useState<ActivityItemDTO[]>([]);
+
+  useEffect(() => {
+    activityApi.list().then(res => setActivities(res.data)).catch(console.error);
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader title={<><ClockIcon /> Recent activity</>} />
+      <CardBody>
+        <div>
+          {activities.length > 0 ? (
+            activities.map((item, idx) => (
           <div
             key={item.id}
             className="flex gap-[10px] items-start py-2"
             style={{
-              borderBottom: idx < recentActivity.length - 1 ? '1px solid var(--border)' : 'none',
+              borderBottom: idx < activities.length - 1 ? '1px solid var(--border)' : 'none',
             }}
           >
             <div
@@ -43,8 +51,14 @@ export const RecentActivity: React.FC = () => (
               {item.time}
             </div>
           </div>
-        ))}
-      </div>
-    </CardBody>
-  </Card>
-);
+          ))
+        ) : (
+          <div className="text-xs text-center py-4" style={{ color: 'var(--text-muted)' }}>
+            No recent activity
+          </div>
+        )}
+        </div>
+      </CardBody>
+    </Card>
+  );
+};

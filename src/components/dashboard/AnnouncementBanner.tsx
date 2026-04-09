@@ -1,22 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toggle } from '@/components/ui/Toggle';
-import { useToggle } from '@/hooks/useToggle';
 import { Modal, Input, Button } from 'antd';
+import { announcementsApi, type AnnouncementDTO } from '@/services/api';
 
 export const AnnouncementBanner: React.FC = () => {
-  const { on, toggle } = useToggle(true);
+  const [announcement, setAnnouncement] = useState<AnnouncementDTO | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [announcementText, setAnnouncementText] = useState("Now open in Bangalore! Visit us on ECR, Chennai — Open everyday");
-  const [inputValue, setInputValue] = useState(announcementText);
+  const [inputValue, setInputValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    announcementsApi.list()
+      .then(res => {
+        if (res.data && res.data.length > 0) {
+          setAnnouncement(res.data[0]);
+        }
+      }).catch(console.error);
+  }, []);
+
+  const handleToggle = async () => {
+    if (!announcement) return;
+    const newEnabled = !announcement.enabled;
+    setAnnouncement({ ...announcement, enabled: newEnabled });
+    try {
+      await announcementsApi.update(announcement.id, { enabled: newEnabled });
+    } catch(e) {
+      setAnnouncement({ ...announcement, enabled: !newEnabled });
+      console.error(e);
+    }
+  };
 
   const showModal = () => {
-    setInputValue(announcementText);
+    setInputValue(announcement?.text || "Now open in Bangalore! Visit us on ECR, Chennai — Open everyday");
     setIsModalOpen(true);
   };
 
-  const handleOk = () => {
-    setAnnouncementText(inputValue);
-    setIsModalOpen(false);
+  const handleOk = async () => {
+    setSaving(true);
+    try {
+      if (announcement) {
+        const res = await announcementsApi.update(announcement.id, { text: inputValue });
+        setAnnouncement(res.data);
+      } else {
+        const res = await announcementsApi.create({ text: inputValue, enabled: true });
+        setAnnouncement(res.data);
+      }
+      setIsModalOpen(false);
+    } catch(e) {
+      console.error(e);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -40,7 +74,7 @@ export const AnnouncementBanner: React.FC = () => {
         </svg>
         <div className="flex-1 text-xs" style={{ color: 'var(--text-secondary)' }}>
           <strong style={{ color: 'var(--text-primary)' }}>Announcement bar</strong>
-          {' '}— "{announcementText}"
+          {' '}— "{announcement?.text || 'No announcement set'}"
         </div>
         <span 
           className="text-[11px] font-semibold cursor-pointer mr-3 transition-opacity hover:opacity-70" 
@@ -49,7 +83,7 @@ export const AnnouncementBanner: React.FC = () => {
         >
           Edit text
         </span>
-        <Toggle on={on} onToggle={toggle} />
+        <Toggle on={announcement?.enabled ?? false} onToggle={handleToggle} />
       </div>
 
       <Modal
@@ -65,10 +99,11 @@ export const AnnouncementBanner: React.FC = () => {
           <Button 
             key="submit" 
             type="primary" 
+            loading={saving}
             onClick={handleOk}
             style={{ background: 'var(--orange)', borderColor: 'var(--orange)' }}
           >
-            Processed
+            Save Changes
           </Button>,
         ]}
       >

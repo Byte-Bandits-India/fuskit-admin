@@ -59,6 +59,20 @@ const EyeIcon = () => (
   </svg>
 );
 
+/* ─── Helpers ─── */
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+      return `${apiBase}${parsed.pathname.replace(/^\/api/, '')}${parsed.search}`;
+    }
+  } catch (e) { }
+  if (url.startsWith('http')) return url;
+  return `${apiBase}${url.startsWith('/') ? '' : '/'}${url.replace(/^\/api/, '')}`;
+};
+
 /* ─── Main Page ─── */
 export const BannerSettingsPage: React.FC = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -76,7 +90,12 @@ export const BannerSettingsPage: React.FC = () => {
 
   const fetchBanners = async () => {
     try {
-      const res = await bannersApi.list();
+      const params: any = {};
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (typeFilter !== 'all') params.type = typeFilter;
+      if (searchQuery.trim()) params.q = searchQuery.trim();
+
+      const res = await bannersApi.list(params);
       setBanners(res.data);
       setMeta(res.meta);
       if (res.data.length > 0 && !selectedId) {
@@ -87,7 +106,7 @@ export const BannerSettingsPage: React.FC = () => {
 
   useEffect(() => {
     fetchBanners();
-  }, []);
+  }, [statusFilter, typeFilter, searchQuery]);
 
   /* Stats */
   const stats = useMemo(() => {
@@ -102,13 +121,9 @@ export const BannerSettingsPage: React.FC = () => {
   }, [banners, meta]);
 
   /* Filtered */
-  const filtered = useMemo(() => {
-    let r = banners;
-    if (searchQuery.trim()) { const q = searchQuery.toLowerCase(); r = r.filter(b => b.name.toLowerCase().includes(q)); }
-    if (statusFilter !== 'all') r = r.filter(b => b.status === statusFilter);
-    if (typeFilter !== 'all') r = r.filter(b => b.type === typeFilter);
-    return r;
-  }, [banners, searchQuery, statusFilter, typeFilter]);
+  // The backend handles filtering now, so we just use banners directly, 
+  // but we may want to keep basic client-side if the API is debounce-delayed
+  const filtered = banners;
 
   const selectedBanner = banners.find(b => b.id === selectedId) || filtered[0];
 
@@ -140,33 +155,23 @@ export const BannerSettingsPage: React.FC = () => {
     }
     setDeleteModalOpen(false); setDeletingBanner(null);
   };
-  const handleSave = async (data: any) => {
-    // Note: data might be a FormData or partial if we implement form data properly
-    // BannerDrawer will be updated to pass FormData if images are present.
-    // For now we'll support both Partial<Banner> and FormData.
+  const handleSave = async (formData: FormData) => {
+    // BannerDrawer.handleSubmit always builds and passes FormData (required for
+    // multipart/form-data uploads).  The backend coerces boolean strings.
     try {
-      const isFormData = data instanceof FormData;
       if (drawerMode === 'edit' && editingBanner) {
-        if (isFormData) {
-          await bannersApi.update(editingBanner.id, data);
-        } else {
-          await bannersApi.updatePartial(editingBanner.id, data);
-        }
+        await bannersApi.update(editingBanner.id, formData);
       } else {
-        if (isFormData) {
-          await bannersApi.create(data);
-        } else {
-          // Wrap in formData
-          const fd = new FormData();
-          Object.entries(data).forEach(([k, v]) => fd.append(k, String(v)));
-          await bannersApi.create(fd);
-        }
+        const res = await bannersApi.create(formData);
+        // Select the newly created banner
+        if (res?.data?.id) setSelectedId(res.data.id);
       }
+      setDrawerOpen(false);
       fetchBanners();
     } catch (e) {
       console.error('Failed to save banner', e);
+      // Keep drawer open so user can correct and retry
     }
-    setDrawerOpen(false);
   };
 
   return (
@@ -272,8 +277,12 @@ export const BannerSettingsPage: React.FC = () => {
                     className="flex-shrink-0 flex items-center justify-center overflow-hidden relative"
                     style={{ width: 80, minHeight: 70, background: banner.thumbBg }}
                   >
-                    <span className="text-[28px] select-none relative z-[1]">{banner.emoji}</span>
-                    <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.04)' }} />
+                    {banner.desktopImageUrl ? (
+                      <img src={getImageUrl(banner.mobileImageUrl)} alt="" className="w-full h-full object-cover relative z-[1]" />
+                    ) : (
+                      <span className="text-[28px] select-none relative z-[1]">{banner.emoji}</span>
+                    )}
+                    <div className="absolute inset-0 z-0" style={{ background: 'rgba(0,0,0,0.04)' }} />
                   </div>
 
                   {/* Body */}
@@ -422,7 +431,7 @@ export const BannerSettingsPage: React.FC = () => {
                     </div>
                     {selectedBanner.desktopImageUrl ? (
                       <div className="absolute right-0 top-0 bottom-0 w-[45%]">
-                        <img src={selectedBanner.desktopImageUrl} alt="" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to right, #24140a, transparent)' }} />
                       </div>
                     ) : (
@@ -434,7 +443,11 @@ export const BannerSettingsPage: React.FC = () => {
                 {/* Menu banner preview */}
                 {selectedBanner.type === 'menu' && (
                   <div className="flex items-center gap-3 px-4 py-[14px] rounded-lg m-3" style={{ background: '#FFF3E0', border: '1px solid rgba(212,114,42,0.15)' }}>
-                    <span className="text-[36px] flex-shrink-0">{selectedBanner.emoji}</span>
+                    {selectedBanner.desktopImageUrl ? (
+                      <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-12 h-12 object-cover rounded-md flex-shrink-0" />
+                    ) : (
+                      <span className="text-[36px] flex-shrink-0">{selectedBanner.emoji}</span>
+                    )}
                     <div>
                       <div className="font-display text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>{selectedBanner.title}</div>
                       {selectedBanner.subtitle && <div className="text-[10px] mt-[2px]" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
@@ -445,8 +458,14 @@ export const BannerSettingsPage: React.FC = () => {
                 {/* Popup preview */}
                 {selectedBanner.type === 'popup' && (
                   <div className="flex items-center justify-center rounded-lg p-4" style={{ background: 'rgba(0,0,0,0.35)' }}>
-                    <div className="rounded-[10px] p-4 text-center" style={{ width: 180, background: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-                      <div className="text-[28px] mb-2">{selectedBanner.emoji}</div>
+                    <div className="rounded-[10px] p-4 text-center overflow-hidden" style={{ width: 180, background: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+                      {selectedBanner.desktopImageUrl ? (
+                        <div className="w-full h-[100px] -mt-4 -mx-4 mb-3 relative">
+                          <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="text-[28px] mb-2">{selectedBanner.emoji}</div>
+                      )}
                       <div className="font-display text-xs font-bold mb-1" style={{ color: 'var(--text-primary)' }}>{selectedBanner.title}</div>
                       {selectedBanner.subtitle && <div className="text-[10px] mb-[10px] leading-[1.5]" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
                       {selectedBanner.ctaLabel && <div className="block px-[14px] py-[6px] rounded-[6px] text-[10px] font-bold text-white mb-[6px]" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</div>}

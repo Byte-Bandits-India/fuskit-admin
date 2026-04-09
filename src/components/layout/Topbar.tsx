@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ThunderboltOutlined } from '@ant-design/icons';
 import type { UserData } from '@/types';
+import { notificationsApi, type NotificationDTO } from '@/services/api';
+import { hasModuleViewPerm } from './DashboardLayout';
 
 interface TopbarProps {
   breadcrumb?: string[];
@@ -8,6 +10,7 @@ interface TopbarProps {
   onToggleSidebar: () => void;
   onLogout: () => void;
   user?: UserData | null;
+  onNavClick?: (id: string) => void;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -16,17 +19,53 @@ export const Topbar: React.FC<TopbarProps> = ({
   onToggleSidebar,
   onLogout,
   user,
+  onNavClick,
 }) => {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const menuOptions = [
+    { id: 'dashboard', label: 'Dashboard', mod: 'dashboard' },
+    { id: 'users-permissions', label: 'Users & Permissions', mod: 'users' },
+    { id: 'categories', label: 'Categories', mod: 'categories' },
+    { id: 'menu-items', label: 'Menu Items', mod: 'items' },
+    { id: 'banner-settings', label: 'Banner settings', mod: 'banners' },
+    { id: 'manage-stores', label: 'Manage Stores', mod: 'stores' },
+    { id: 'gallery', label: 'Gallery', mod: 'gallery' },
+  ].filter(opt => {
+    if (opt.mod === 'dashboard') return true;
+    return hasModuleViewPerm(user, opt.mod);
+  });
+
+  const filteredOptions = menuOptions.filter(opt => opt.label.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
 
+  const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const currentUser = user;
+
+  const fetchNotifs = async () => {
+    try {
+      const resCount = await notificationsApi.unreadCount();
+      setUnreadCount(resCount.count);
+      const resList = await notificationsApi.list();
+      setNotifications(resList.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+    // optional: add interval check here
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -108,6 +147,20 @@ export const Topbar: React.FC<TopbarProps> = ({
             className="text-xs flex-1 bg-transparent border-none outline-none"
             placeholder="Search menu, stores, settings…"
             style={{ color: '#552710' }}
+            value={searchQuery}
+            onChange={e => {
+              setSearchQuery(e.target.value);
+              setFilterOpen(true);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                if (filteredOptions.length > 0 && onNavClick) {
+                  onNavClick(filteredOptions[0].id);
+                  setSearchQuery('');
+                  setFilterOpen(false);
+                }
+              }
+            }}
           />
           <div className="relative flex items-center" ref={filterRef}>
             <div
@@ -140,14 +193,31 @@ export const Topbar: React.FC<TopbarProps> = ({
                 onClick={e => e.stopPropagation()}
               >
                 <div className="px-3 py-2 border-b border-[var(--border)]">
-                  <div className="text-[12px] font-semibold text-[var(--text-primary)]">Filter By</div>
+                  <div className="text-[12px] font-semibold text-[var(--text-primary)]">Navigation Menu</div>
                 </div>
-                <div className="p-1.5 flex flex-col gap-0.5">
-                  {['Stores', 'Categories', 'Menu Items'].map(f => (
-                    <label key={f} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-hover)] cursor-pointer text-[11px] text-[var(--text-primary)] transition-colors">
-                      <input type="checkbox" className="rounded border-[var(--border)] bg-transparent w-3 h-3 text-[var(--orange)] focus:ring-0 cursor-pointer" />
-                      {f}
-                    </label>
+                <div className="p-1 flex flex-col gap-0.5">
+                  {filteredOptions.length === 0 && (
+                    <div className="px-2 py-3 text-center text-[11px] text-[var(--text-muted)]">
+                      No matching pages
+                    </div>
+                  )}
+                  {filteredOptions.map(opt => (
+                    <div 
+                      key={opt.id} 
+                      className="flex items-center gap-2 px-2 py-2 rounded hover:bg-[var(--bg-hover)] cursor-pointer text-[12px] font-medium transition-colors"
+                      style={{ color: 'var(--text-primary)' }}
+                      onClick={() => {
+                        if (onNavClick) onNavClick(opt.id);
+                        setFilterOpen(false);
+                        setSearchQuery('');
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] text-[var(--orange)] opacity-80" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14"></path>
+                        <path d="M12 5l7 7-7 7"></path>
+                      </svg>
+                      {opt.label}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -160,12 +230,12 @@ export const Topbar: React.FC<TopbarProps> = ({
       <div className="flex items-center gap-[10px]">
         {/* Notification bell */}
         <div className="relative" ref={notifRef}>
-          <IconButton hasNotif onClick={() => setNotifOpen(!notifOpen)}>
+          <IconButton hasNotif={unreadCount > 0 || notifications.some(n => !n.read)} onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) fetchNotifs(); }}>
             <svg viewBox="0 0 24 24" className="w-[15px] h-[15px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'rgba(240,217,192,0.6)' }}>
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
             </svg>
           </IconButton>
-          
+
           {notifOpen && (
             <div
               className="absolute right-0 mt-2 w-[280px] sm:w-[320px] rounded-lg shadow-xl overflow-hidden backdrop-blur-md z-[100] animate-in fade-in slide-in-from-top-2 duration-200"
@@ -176,20 +246,34 @@ export const Topbar: React.FC<TopbarProps> = ({
             >
               <div className="px-4 py-3 border-b border-[var(--border)] flex justify-between items-center">
                 <div className="text-[13px] font-semibold text-[var(--text-primary)]">Notifications</div>
-                <span className="text-[10px] text-[var(--orange)] cursor-pointer hover:underline">Mark all read</span>
+                <span
+                  className="text-[10px] text-[var(--orange)] cursor-pointer hover:underline"
+                  onClick={async () => {
+                    await notificationsApi.markAllRead();
+                    fetchNotifs();
+                  }}
+                >Mark all read</span>
               </div>
               <div className="max-h-[320px] overflow-y-auto">
-                {[
-                  { title: 'New Store Added', desc: 'A new store was added in Chennai region', time: '2 mins ago', unread: true },
-                  { title: 'Menu Item Updated', desc: 'Spicy Chicken Burger price was updated', time: '1 hour ago', unread: true },
-                  { title: 'System Notice', desc: 'Scheduled maintenance will occur tonight at 2 AM', time: '5 hours ago', unread: false },
-                ].map((n, i) => (
-                  <div key={i} className="px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-hover)] cursor-pointer flex gap-3 transition-colors">
-                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: n.unread ? 'var(--orange)' : 'transparent' }}></div>
+                {notifications.length === 0 && (
+                  <div className="px-4 py-6 text-center text-[12px] text-[var(--text-muted)]">No notifications</div>
+                )}
+                {notifications.slice(0, 5).map((n) => (
+                  <div
+                    key={n.id}
+                    className="px-4 py-3 border-b border-[var(--border)] last:border-0 hover:bg-[var(--bg-hover)] cursor-pointer flex gap-3 transition-colors"
+                    onClick={async () => {
+                      if (!n.read) {
+                        await notificationsApi.markRead(n.id);
+                        fetchNotifs();
+                      }
+                    }}
+                  >
+                    <div className="mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: !n.read ? 'var(--red)' : 'transparent' }}></div>
                     <div>
                       <div className="text-[12px] font-medium text-[var(--text-primary)]">{n.title}</div>
-                      <div className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{n.desc}</div>
-                      <div className="text-[10px] mt-1" style={{ color: 'rgba(240,217,192,0.4)' }}>{n.time}</div>
+                      <div className="text-[11px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{n.description}</div>
+                      <div className="text-[10px] mt-1" style={{ color: 'rgba(240,217,192,0.4)' }}>{n.time || 'Recently'}</div>
                     </div>
                   </div>
                 ))}
@@ -314,10 +398,11 @@ const IconButton: React.FC<IconButtonProps> = ({ children, hasNotif, onClick }) 
       <span
         className="absolute rounded-full"
         style={{
-          top: 6, right: 6,
+          top: 8, right: 9,
           width: 7, height: 7,
-          background: 'var(--orange)',
+          background: 'var(--red)',
           border: '1.5px solid var(--bg-sidebar)',
+          zIndex: 50,
         }}
       />
     )}
