@@ -55,7 +55,7 @@ export const authApi = {
    * Login with email + password. Returns accessToken.
    */
   login: (email: string, password: string) =>
-    request<{ accessToken: string }>('/auth/login', {
+    request<{ accessToken: string }>('/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
