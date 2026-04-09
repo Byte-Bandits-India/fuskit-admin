@@ -28,8 +28,8 @@ jobs:
             echo "VITE_API_BASE_URL=http://fusk-it.duckdns.org/api" > .env.production
             echo "VITE_GOOGLE_AUTH_URL=http://fusk-it.duckdns.org/api/auth/google" >> .env.production
           else
-            echo "VITE_API_BASE_URL=http://dev-fusk-it.duckdns.org/api" > .env.development
-            echo "VITE_GOOGLE_AUTH_URL=http://dev-fusk-it.duckdns.org/api/auth/google" >> .env.development
+            echo "VITE_API_BASE_URL=http://dev-fusk-it.duckdns.org/api" > .env.production
+            echo "VITE_GOOGLE_AUTH_URL=http://dev-fusk-it.duckdns.org/api/auth/google" >> .env.production
           fi
 
       - name: 🏗 Build Vite App
