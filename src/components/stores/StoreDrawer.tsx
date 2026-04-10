@@ -136,19 +136,27 @@ export const StoreDrawer: React.FC<StoreDrawerProps> = ({ open, mode, store, onC
     setHours(prev => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
   };
 
+  const formatPhone = (val: string) => {
+    const trimmed = val.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith('+')) return trimmed;
+    const digitsOnly = trimmed.replace(/\D/g, '');
+    return digitsOnly ? `+91 ${digitsOnly}` : undefined;
+  };
+
   const handleSave = () => {
     const payload: Partial<Store> = {
       name: name.trim(),
       city: city.trim(),
       state: state.trim(),
       address: address.trim(),
-      phone: phone.trim(),
-      whatsapp: whatsapp.trim() || undefined,
+      phone: formatPhone(phone) || '',
+      whatsapp: formatPhone(whatsapp),
       email: email.trim() || undefined,
       mapsLink: mapsLink.trim(),
       mapsEmbed: mapsEmbed.trim() || undefined,
       managerName: managerName.trim() || undefined,
-      managerPhone: managerPhone.trim() || undefined,
+      managerPhone: formatPhone(managerPhone),
       hours,
       enabled,
       rating: rating ? parseFloat(rating) : undefined,
