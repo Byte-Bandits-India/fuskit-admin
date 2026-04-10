@@ -31,10 +31,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
-      const body = (await res.json()) as { message?: string; error?: string; details?: any[] };
+      const body = (await res.json()) as { message?: string; error?: string; errors?: Record<string, string> | any[]; details?: any[] };
       message = body.message ?? body.error ?? message;
+      // Handle object-style errors (from Zod validate middleware: { field: 'message' })
+      if (body.errors && !Array.isArray(body.errors) && typeof body.errors === 'object') {
+        const msgs = Object.values(body.errors).filter(Boolean).join(', ');
+        if (msgs) message = `${message}: ${msgs}`;
+      }
+      // Handle array-style details
       if (body.details && Array.isArray(body.details)) {
-        const detailMsgs = body.details.map(d => d.message || JSON.stringify(d)).join(', ');
+        const detailMsgs = body.details.map((d: any) => d.message || JSON.stringify(d)).join(', ');
         if (detailMsgs) message = `${message}: ${detailMsgs}`;
       }
     } catch {

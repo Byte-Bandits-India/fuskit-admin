@@ -147,8 +147,9 @@ export const ManageStoresPage: React.FC = () => {
       }
       setDrawerOpen(false);
       fetchStores();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to save store', e);
+      alert(`Failed to save store:\n${e?.message || 'Unknown error'}`);
     }
   };
 
