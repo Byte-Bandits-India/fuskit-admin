@@ -9,7 +9,41 @@ function getToken(): string | null {
   return localStorage.getItem('fuskit_token');
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+function getRefreshToken(): string | null {
+  return localStorage.getItem('fuskit_refresh_token');
+}
+
+function saveTokens(accessToken: string, refreshToken?: string) {
+  localStorage.setItem('fuskit_token', accessToken);
+  if (refreshToken) localStorage.setItem('fuskit_refresh_token', refreshToken);
+}
+
+export function clearTokens() {
+  localStorage.removeItem('fuskit_token');
+  localStorage.removeItem('fuskit_refresh_token');
+  localStorage.removeItem('fuskit_auth');
+}
+
+/** Silently get a new access token using the stored refresh token. Returns null if refresh fails. */
+async function tryRefreshAccessToken(): Promise<string | null> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { accessToken: string };
+    localStorage.setItem('fuskit_token', data.accessToken);
+    return data.accessToken;
+  } catch {
+    return null;
+  }
+}
+
+async function request<T>(path: string, options: RequestInit = {}, _retry = false): Promise<T> {
   const token = getToken();
 
   const headers: Record<string, string> = {
@@ -28,17 +62,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     );
   }
 
+  // Auto-refresh on 401 (expired access token) — only retry once
+  if (res.status === 401 && !_retry) {
+    const newToken = await tryRefreshAccessToken();
+    if (newToken) {
+      // Retry the original request with the new token
+      return request<T>(path, options, true);
+    } else {
+      // Refresh failed — force logout
+      clearTokens();
+      window.location.href = '/';
+      throw new Error('Session expired. Please log in again.');
+    }
+  }
+
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
       const body = (await res.json()) as { message?: string; error?: string; errors?: Record<string, string> | any[]; details?: any[] };
       message = body.message ?? body.error ?? message;
-      // Handle object-style errors (from Zod validate middleware: { field: 'message' })
       if (body.errors && !Array.isArray(body.errors) && typeof body.errors === 'object') {
         const msgs = Object.values(body.errors).filter(Boolean).join(', ');
         if (msgs) message = `${message}: ${msgs}`;
       }
-      // Handle array-style details
       if (body.details && Array.isArray(body.details)) {
         const detailMsgs = body.details.map((d: any) => d.message || JSON.stringify(d)).join(', ');
         if (detailMsgs) message = `${message}: ${detailMsgs}`;
@@ -62,23 +108,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const authApi = {
   /**
    * POST /auth/login
-   * Login with email + password. Returns accessToken.
+   * Login with email + password. Saves both tokens to localStorage.
    */
-  login: (email: string, password: string) =>
-    request<{ accessToken: string }>('/login', {
+  login: async (email: string, password: string) => {
+    const data = await request<{ accessToken: string; refreshToken: string }>('/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+      body: JSON.stringify({ email, password, remember: true }),
+    });
+    saveTokens(data.accessToken, data.refreshToken);
+    return data;
+  },
 
   /**
    * POST /auth/google
-   * Login with Google SSO. Returns accessToken.
+   * Login with Google SSO. Saves both tokens to localStorage.
    */
-  googleLogin: (credential: string) =>
-    request<{ accessToken: string }>('/auth/google', {
+  googleLogin: async (credential: string) => {
+    const data = await request<{ accessToken: string; refreshToken: string }>('/auth/google', {
       method: 'POST',
       body: JSON.stringify({ credential }),
-    }),
+    });
+    saveTokens(data.accessToken, data.refreshToken);
+    return data;
+  },
 
   /**
    * GET /auth/me

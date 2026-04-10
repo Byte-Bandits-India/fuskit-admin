@@ -7,6 +7,7 @@ import { BannerSettingsPage } from '@/pages/BannerSettingsPage';
 import { ManageStoresPage } from '@/pages/ManageStoresPage';
 import { UsersPermissionsPage } from '@/pages/UsersPermissionsPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { clearTokens } from '@/services/api';
 import './index.css';
 
 function App() {
@@ -29,8 +30,7 @@ function App() {
   });
 
   const handleLogout = () => {
-    localStorage.removeItem('fuskit_auth');
-    localStorage.removeItem('fuskit_token');
+    clearTokens();
     setIsAuthenticated(false);
   };
 

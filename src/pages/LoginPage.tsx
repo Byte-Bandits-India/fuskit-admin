@@ -45,8 +45,7 @@ export const LoginPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
 
     setIsLoading(true);
     try {
-      const { accessToken } = await authApi.login(email.trim(), password);
-      localStorage.setItem('fuskit_token', accessToken);
+      await authApi.login(email.trim(), password);
       localStorage.setItem('fuskit_auth', 'true');
       onLogin();
     } catch (err) {
