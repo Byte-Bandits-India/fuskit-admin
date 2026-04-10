@@ -218,11 +218,18 @@ export const categoriesApi = {
   /**
    * POST /categories — create new category
    */
-  create: (data: FormData) =>
-    request<{ data: CategoryDTO }>('/categories', {
+  create: (data: FormData | CreateCategoryPayload) => {
+    let body: BodyInit;
+    if (data instanceof FormData) {
+      body = data;
+    } else {
+      body = JSON.stringify(data);
+    }
+    return request<{ data: CategoryDTO }>('/categories', {
       method: 'POST',
-      body: data,
-    }),
+      body,
+    });
+  },
 
   /**
    * PUT /categories/:id — full or partial update (includes visibility toggle)
@@ -337,11 +344,18 @@ export const menuItemsApi = {
   /**
    * POST /menu-items — create a new menu item
    */
-  create: (data: FormData) =>
-    request<{ data: MenuItemDTO }>('/menu-items', {
+  create: (data: FormData | CreateMenuItemPayload) => {
+    let body: BodyInit;
+    if (data instanceof FormData) {
+      body = data;
+    } else {
+      body = JSON.stringify(data);
+    }
+    return request<{ data: MenuItemDTO }>('/menu-items', {
       method: 'POST',
-      body: data,
-    }),
+      body,
+    });
+  },
 
   /**
    * PUT /menu-items/:id — full or partial update (includes visibility toggle)
