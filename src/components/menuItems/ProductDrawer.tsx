@@ -8,7 +8,7 @@ interface ProductDrawerProps {
   categories: string[];
   stores: string[];
   onClose: () => void;
-  onSave: (data: Partial<Product>) => void;
+  onSave: (data: Partial<Product> & { images?: File[]; video?: File | null; imagesToDelete?: string[] }) => void;
 }
 
 const EMOJI_OPTIONS = ['🥐', '🍗', '🥤', '🍟', '🍫', '🍨', '🍳', '🍜', '🧀', '☕', '🍕', '🍔', '🧁', '🍦', '🌯', '🍿'];
@@ -39,26 +39,32 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
 
   // Image / video upload state
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []).slice(0, 5);
     if (!files.length) return;
-    setImagePreviews(files.map(f => URL.createObjectURL(f)));
+    setImageFiles(prev => [...prev, ...files].slice(0, 5));
+    setImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))].slice(0, 5));
   };
 
   const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 5);
     if (!files.length) return;
-    setImagePreviews(files.map(f => URL.createObjectURL(f)));
+    setImageFiles(prev => [...prev, ...files].slice(0, 5));
+    setImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))].slice(0, 5));
   };
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setVideoFile(file);
     setVideoPreview(URL.createObjectURL(file));
   };
 
@@ -66,12 +72,22 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (!file || !file.type.startsWith('video/')) return;
+    setVideoFile(file);
     setVideoPreview(URL.createObjectURL(file));
   };
 
   const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-  const removeImage = (idx: number) => setImagePreviews(prev => prev.filter((_, i) => i !== idx));
-  const removeVideo = () => { setVideoPreview(null); if (videoInputRef.current) videoInputRef.current.value = ''; };
+  const removeImage = (idx: number) => {
+    const url = imagePreviews[idx];
+    if (url.startsWith('http') || url.startsWith('/')) {
+      setImagesToDelete(prev => [...prev, url]);
+    } else {
+      const newFileIdx = imagePreviews.slice(0, idx).filter(u => !(u.startsWith('http') || u.startsWith('/'))).length;
+      setImageFiles(prev => prev.filter((_, i) => i !== newFileIdx));
+    }
+    setImagePreviews(prev => prev.filter((_, i) => i !== idx));
+  };
+  const removeVideo = () => { setVideoPreview(null); setVideoFile(null); if (videoInputRef.current) videoInputRef.current.value = ''; };
 
   useEffect(() => {
     if (mode === 'edit' && product) {
@@ -86,15 +102,20 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       setBadges(product.badges);
       setVisible(product.visible);
       setSelectedEmoji(product.emoji);
+      setImagePreviews(product.imageUrls || []);
+      setVideoPreview(product.videoUrl || null);
     } else {
       setName(''); setDescription(''); setAltText(''); setCategory('');
       setIsVeg(true); setPrice(''); setOldPrice(''); setAddOnPrice('');
       setSelectedStores(stores); setStoreSpecial('');
       setBadges([]); setVisible(true); setSelectedEmoji('🍽️');
+      setImagePreviews([]);
+      setVideoPreview(null);
     }
     // Reset media
-    setImagePreviews([]);
-    setVideoPreview(null);
+    setImageFiles([]);
+    setVideoFile(null);
+    setImagesToDelete([]);
     if (imageInputRef.current) imageInputRef.current.value = '';
     if (videoInputRef.current) videoInputRef.current.value = '';
   }, [open, mode, product, stores]);
@@ -130,6 +151,9 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       storeSpecial: storeSpecial || undefined,
       badges,
       visible,
+      images: imageFiles,
+      video: videoFile,
+      imagesToDelete,
     });
   };
 

@@ -13,7 +13,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(!(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
     ...((options.headers as Record<string, string>) ?? {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
@@ -162,6 +162,7 @@ export interface CategoryDTO {
   type: string;
   visible: boolean;
   displayOrder: number;
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -217,20 +218,27 @@ export const categoriesApi = {
   /**
    * POST /categories — create new category
    */
-  create: (data: CreateCategoryPayload) =>
+  create: (data: FormData) =>
     request<{ data: CategoryDTO }>('/categories', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   /**
    * PUT /categories/:id — full or partial update (includes visibility toggle)
    */
-  update: (id: string, data: UpdateCategoryPayload) =>
-    request<{ data: CategoryDTO }>(`/categories/${id}`, {
+  update: (id: string, data: FormData | UpdateCategoryPayload) => {
+    let body: BodyInit;
+    if (data instanceof FormData) {
+      body = data;
+    } else {
+      body = JSON.stringify(data);
+    }
+    return request<{ data: CategoryDTO }>(`/categories/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+      body,
+    });
+  },
 
   /**
    * DELETE /categories/:id — will 409 if category has items
@@ -269,6 +277,8 @@ export interface MenuItemDTO {
   storeSpecial: string | null;
   badges: string[];
   displayOrder: number;
+  imageUrls?: string[];
+  videoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -327,20 +337,27 @@ export const menuItemsApi = {
   /**
    * POST /menu-items — create a new menu item
    */
-  create: (data: CreateMenuItemPayload) =>
+  create: (data: FormData) =>
     request<{ data: MenuItemDTO }>('/menu-items', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: data,
     }),
 
   /**
    * PUT /menu-items/:id — full or partial update (includes visibility toggle)
    */
-  update: (id: string, data: UpdateMenuItemPayload) =>
-    request<{ data: MenuItemDTO }>(`/menu-items/${id}`, {
+  update: (id: string, data: FormData | UpdateMenuItemPayload) => {
+    let body: BodyInit;
+    if (data instanceof FormData) {
+      body = data;
+    } else {
+      body = JSON.stringify(data);
+    }
+    return request<{ data: MenuItemDTO }>(`/menu-items/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+      body,
+    });
+  },
 
   /**
    * DELETE /menu-items/:id

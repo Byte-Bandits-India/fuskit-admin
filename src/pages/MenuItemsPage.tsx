@@ -30,6 +30,8 @@ export interface Product {
   stores: string[];
   storeSpecial?: string;
   badges: string[];
+  imageUrls?: string[];
+  videoUrl?: string;
 }
 
 /* ─── DTO → local type mapper ─── */
@@ -50,6 +52,8 @@ function toProduct(dto: MenuItemDTO): Product {
     stores: dto.stores,
     storeSpecial: dto.storeSpecial ?? undefined,
     badges: dto.badges,
+    imageUrls: dto.imageUrls || [],
+    videoUrl: dto.videoUrl ?? undefined,
   };
 }
 
@@ -284,54 +288,55 @@ export const MenuItemsPage: React.FC = () => {
     }
   };
 
-  const handleSaveProduct = async (data: Partial<Product>) => {
+  const handleSaveProduct = async (data: Partial<Product> & { images?: File[]; video?: File | null; imagesToDelete?: string[] }) => {
     // Resolve category name → ID
     const categoryId =
       categories.find(c => c.name === data.category)?.id ?? editingProduct?.categoryId ?? '';
 
+    if (!categoryId && drawerMode !== 'edit') {
+      showToast('Please select a category', 'warning');
+      return;
+    }
+
+    const fd = new FormData();
+    if (data.name) fd.append('name', data.name);
+    if (data.description !== undefined) fd.append('description', data.description);
+    if (data.emoji) fd.append('emoji', data.emoji);
+    if (categoryId) fd.append('categoryId', categoryId);
+    if (data.price !== undefined) fd.append('price', String(data.price));
+    if (data.oldPrice !== undefined) fd.append('oldPrice', String(data.oldPrice));
+    if (data.discountPercent !== undefined) fd.append('discountPercent', String(data.discountPercent));
+    if (data.isVeg !== undefined) fd.append('isVeg', String(data.isVeg));
+    if (data.visible !== undefined) fd.append('visible', String(data.visible));
+    if (data.stores) fd.append('stores', JSON.stringify(data.stores));
+    if (data.storeSpecial !== undefined) fd.append('storeSpecial', data.storeSpecial || '');
+    if (data.badges) fd.append('badges', JSON.stringify(data.badges));
+
+    if (data.imagesToDelete && data.imagesToDelete.length > 0) {
+      fd.append('imagesToDelete', JSON.stringify(data.imagesToDelete));
+    }
+    
+    if (data.images) {
+      data.images.forEach(f => fd.append('images', f));
+    }
+    if (data.video) {
+        fd.append('video', data.video);
+    }
+
     if (drawerMode === 'edit' && editingProduct) {
       try {
-        const res = await menuItemsApi.update(editingProduct.id, {
-          name:            data.name,
-          description:     data.description,
-          emoji:           data.emoji,
-          categoryId:      categoryId || undefined,
-          price:           data.price,
-          oldPrice:        data.oldPrice,
-          discountPercent: data.discountPercent,
-          isVeg:           data.isVeg,
-          visible:         data.visible,
-          stores:          data.stores,
-          storeSpecial:    data.storeSpecial,
-          badges:          data.badges,
-        });
+        const res = await menuItemsApi.update(editingProduct.id, fd);
         setProducts(prev => prev.map(p => p.id === editingProduct.id ? toProduct(res.data) : p));
         showToast(`"${res.data.name}" updated`, 'success');
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Failed to update item', 'error');
       }
     } else {
-      if (!categoryId) {
-        showToast('Please select a category', 'warning');
-        return;
-      }
       const bgColors = ['#FFF3E0', '#E3F2FD', '#FFF8E1', '#FCE4EC', '#F3E5F5', '#FFFDE7', '#E8F5E9', '#FBE9E7'];
+      fd.append('bgColor', bgColors[Math.floor(Math.random() * bgColors.length)]);
+      
       try {
-        const res = await menuItemsApi.create({
-          name:            data.name || 'New Product',
-          description:     data.description,
-          emoji:           data.emoji || '🍽️',
-          bgColor:         bgColors[Math.floor(Math.random() * bgColors.length)],
-          categoryId,
-          price:           data.price || 0,
-          oldPrice:        data.oldPrice,
-          discountPercent: data.discountPercent,
-          isVeg:           data.isVeg ?? true,
-          visible:         data.visible ?? true,
-          stores:          data.stores || [],
-          storeSpecial:    data.storeSpecial,
-          badges:          data.badges || [],
-        });
+        const res = await menuItemsApi.create(fd);
         const created = toProduct(res.data);
         setProducts(prev => [...prev, created]);
         setMeta(prev => ({

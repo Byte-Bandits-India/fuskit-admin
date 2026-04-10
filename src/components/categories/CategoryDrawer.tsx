@@ -6,7 +6,7 @@ interface CategoryDrawerProps {
   mode: 'add' | 'edit';
   category: Category | null;
   onClose: () => void;
-  onSave: (data: { name: string; emoji: string; visible: boolean; order: number }) => void;
+  onSave: (data: { name: string; emoji: string; visible: boolean; order: number; image?: File }) => void;
 }
 
 const EMOJI_OPTIONS = ['🥐', '🥤', '🍳', '⭐', '🍜', '🍟', '🍿', '🎬', '🍕', '🍔', '🧁', '🍦', '☕', '🧃', '🥗', '🌯'];
@@ -23,11 +23,13 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
   const [visible, setVisible] = useState(true);
   const [order, setOrder] = useState(1);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImageFile(file);
     const url = URL.createObjectURL(file);
     setImagePreview(url);
   };
@@ -38,6 +40,7 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
+    setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
 
@@ -49,7 +52,7 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
       setSelectedEmoji(category.emoji);
       setVisible(category.visible);
       setOrder(category.displayOrder ?? 1);
-      setImagePreview(null);
+      setImagePreview(category.imageUrl || null);
     } else {
       setName('');
       setSelectedEmoji('🥐');
@@ -57,13 +60,14 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
       setOrder(9);
       setImagePreview(null);
     }
+    setImageFile(null);
     // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [open, mode, category]);
 
   const handleSubmit = () => {
     if (!name.trim()) return;
-    onSave({ name: name.trim(), emoji: selectedEmoji, visible, order });
+    onSave({ name: name.trim(), emoji: selectedEmoji, visible, order, image: imageFile || undefined });
   };
 
   return (
@@ -200,7 +204,7 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
 
             {imagePreview && (
               <button
-                onClick={e => { e.stopPropagation(); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                onClick={e => { e.stopPropagation(); setImagePreview(null); setImageFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                 className="mt-[5px] text-[10px] cursor-pointer"
                 style={{ background: 'none', border: 'none', color: 'var(--red)', textDecoration: 'underline', padding: 0 }}
               >

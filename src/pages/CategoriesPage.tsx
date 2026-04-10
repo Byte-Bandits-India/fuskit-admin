@@ -20,6 +20,7 @@ export interface Category {
   type: string;
   visible: boolean;
   displayOrder: number;
+  imageUrl?: string;
 }
 
 type FilterType = 'all' | 'visible' | 'hidden';
@@ -100,6 +101,7 @@ function toCategory(dto: CategoryDTO): Category {
     type: dto.type,
     visible: dto.visible,
     displayOrder: dto.displayOrder,
+    imageUrl: dto.imageUrl,
   };
 }
 
@@ -228,15 +230,22 @@ export const CategoriesPage: React.FC = () => {
     }
   };
 
-  const handleSaveCategory = async (data: { name: string; emoji: string; visible: boolean; order: number }) => {
+  const handleSaveCategory = async (data: { name: string; emoji: string; visible: boolean; order: number; image?: File }) => {
+    const fd = new FormData();
+    fd.append('name', data.name);
+    fd.append('emoji', data.emoji);
+    fd.append('visible', String(data.visible));
+    fd.append('displayOrder', String(data.order));
+    if (data.image) fd.append('image', data.image);
+
     if (drawerMode === 'edit' && editingCategory) {
+      if (!data.image) {
+        // Just empty it, or backend handles it, but since we are using formData we might want to tell backend to delete?
+        // Wait, the backend replaces or deletes based on what's received usually or we might not need to.
+        // Actually, let's keep it simple.
+      }
       try {
-        const res = await categoriesApi.update(editingCategory.id, {
-          name: data.name,
-          emoji: data.emoji,
-          visible: data.visible,
-          displayOrder: data.order,
-        });
+        const res = await categoriesApi.update(editingCategory.id, fd);
         const updated = toCategory(res.data);
         setCategories(prev => prev.map(c => c.id === editingCategory.id ? updated : c));
         showToast(`"${updated.name}" updated`, 'success');
@@ -244,14 +253,9 @@ export const CategoriesPage: React.FC = () => {
         showToast(err instanceof Error ? err.message : 'Failed to update category', 'error');
       }
     } else {
+      fd.append('type', 'Veg');
       try {
-        const res = await categoriesApi.create({
-          name: data.name,
-          emoji: data.emoji,
-          visible: data.visible,
-          displayOrder: data.order,
-          type: 'Veg',
-        });
+        const res = await categoriesApi.create(fd);
         const created = toCategory(res.data);
         setCategories(prev => [...prev, created]);
         setMeta(prev => ({
