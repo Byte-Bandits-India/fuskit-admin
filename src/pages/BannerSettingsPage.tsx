@@ -81,6 +81,7 @@ export const BannerSettingsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [selectedId, setSelectedId] = useState<string>('');
+  const [heroPreviewDevice, setHeroPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'add' | 'edit'>('add');
@@ -395,87 +396,188 @@ export const BannerSettingsPage: React.FC = () => {
         {selectedBanner && (
           <div className="rounded-xl overflow-hidden flex flex-col" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
             {/* Preview header */}
-            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-              <div className="flex items-center gap-[7px] text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>
+            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0" style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card2)' }}>
+              <div className="flex items-center gap-2">
                 <span style={{ color: 'var(--orange)' }}><EyeIcon /></span>
-                Live preview — {selectedBanner.name}
+                <div>
+                  <div className="text-[12px] font-bold leading-none" style={{ color: 'var(--text-primary)' }}>{selectedBanner.name}</div>
+                  <div className="text-[10px] mt-[2px]" style={{ color: 'var(--text-muted)' }}>Live preview</div>
+                </div>
+                <span className="text-[9px] font-bold px-[8px] py-[3px] rounded-full ml-1"
+                  style={{ background: TYPE_COLORS[selectedBanner.type].bg, color: TYPE_COLORS[selectedBanner.type].color }}>
+                  {TYPE_COLORS[selectedBanner.type].label}
+                </span>
               </div>
+              {/* Device toggle — Hero only */}
+              {selectedBanner.type === 'hero' && (
+                <div className="flex items-center rounded-full p-[3px]" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                  <button
+                    onClick={() => setHeroPreviewDevice('desktop')}
+                    className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-full transition-all duration-200 text-[10px] font-semibold"
+                    style={heroPreviewDevice === 'desktop' ? { background: '#18181b', color: '#fff' } : { background: 'transparent', color: 'var(--text-muted)' }}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-[12px] h-[12px]" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8m-4-4v4" /></svg>
+                    Desktop
+                  </button>
+                  <button
+                    onClick={() => setHeroPreviewDevice('mobile')}
+                    className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-full transition-all duration-200 text-[10px] font-semibold"
+                    style={heroPreviewDevice === 'mobile' ? { background: '#18181b', color: '#fff' } : { background: 'transparent', color: 'var(--text-muted)' }}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-[10px] h-[10px]" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" /></svg>
+                    Mobile
+                  </button>
+                </div>
+              )}
             </div>
+
             {/* Preview body */}
             <div className="p-4 flex flex-col gap-[14px]">
-              {/* Browser frame */}
-              <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                {/* Browser bar */}
-                <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
-                  <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
-                  <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
-                  <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
-                  <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                    <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+
+              {/* ══ HERO ══ */}
+              {selectedBanner.type === 'hero' && (
+                <>
+                  {heroPreviewDevice === 'desktop' ? (
+                    /* Desktop — Mac browser chrome */
+                    <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                      <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                        <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                        <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                        <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#28c840' }} />
+                        <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-[#111] overflow-hidden" style={{ minHeight: 120 }}>
+                        {selectedBanner.desktopImageUrl ? (
+                          <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="Desktop hero" className="w-full h-auto block" />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-2" style={{ minHeight: 160, color: 'rgba(255,255,255,0.3)' }}>
+                            <span className="text-[48px]">{selectedBanner.emoji}</span>
+                            <span className="text-[10px]">No desktop image uploaded</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Mobile — realistic phone bezel */
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="rounded-[36px] overflow-hidden" style={{
+                        width: 200, background: '#0a0a0a',
+                        border: '8px solid #1a1a1a',
+                        boxShadow: '0 0 0 1px #333, 0 20px 60px rgba(0,0,0,0.5)',
+                      }}>
+                        <div className="flex items-center justify-center" style={{ height: 26, background: '#000' }}>
+                          <div className="rounded-full" style={{ width: 60, height: 10, background: '#1a1a1a' }} />
+                        </div>
+                        <div className="overflow-hidden bg-[#111]" style={{ minHeight: 300 }}>
+                          {selectedBanner.mobileImageUrl ? (
+                            <img src={getImageUrl(selectedBanner.mobileImageUrl)} alt="Mobile hero" className="w-full h-auto block" />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center gap-2" style={{ minHeight: 300, color: 'rgba(255,255,255,0.3)' }}>
+                              <span className="text-[40px]">{selectedBanner.emoji}</span>
+                              <span className="text-[9px] text-center px-4">No mobile image uploaded</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-center" style={{ height: 22, background: '#000' }}>
+                          <div className="rounded-full" style={{ width: 50, height: 4, background: '#333' }} />
+                        </div>
+                      </div>
+                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Mobile preview (9:16)</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ══ ANNOUNCEMENT ══ */}
+              {selectedBanner.type === 'announcement' && (
+                <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                  <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                    <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-2 py-[8px] px-4" style={{ background: '#E8873A' }}>
+                    {selectedBanner.emoji && <span className="text-[14px]">{selectedBanner.emoji}</span>}
+                    <span className="text-[11px] font-bold text-white">{selectedBanner.title}</span>
+                    {selectedBanner.ctaLabel && (
+                      <span className="text-[9px] font-bold px-2 py-[2px] rounded" style={{ background: 'rgba(0,0,0,0.2)', color: '#fff' }}>{selectedBanner.ctaLabel}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2 p-4" style={{ background: '#fafafa' }}>
+                    {[70, 50, 60].map((w, i) => (
+                      <div key={i} className="rounded" style={{ height: 8, width: `${w}%`, background: '#e5e5e5' }} />
+                    ))}
                   </div>
                 </div>
-                {/* Announcement bar preview */}
-                {selectedBanner.type === 'announcement' && (
-                  <div className="flex items-center justify-center gap-2 py-[7px] px-[14px]" style={{ background: '#E8873A' }}>
-                    <span className="text-[10px] font-bold text-white">{selectedBanner.title}</span>
-                  </div>
-                )}
-                {/* Hero preview */}
-                {selectedBanner.type === 'hero' && (
-                  <div className="relative overflow-hidden flex items-center px-5" style={{ height: 160, background: 'linear-gradient(135deg,#1C0F05 0%,#3B2010 100%)' }}>
-                    <div className="relative z-10 w-2/3">
-                      <div className="text-[8px] font-bold tracking-[.12em] uppercase mb-[6px]" style={{ color: '#E8873A' }}>Born in Chennai. Fueling the world.</div>
-                      <div className="font-display text-lg font-bold text-white leading-tight mb-[6px]">{selectedBanner.title}</div>
-                      {selectedBanner.subtitle && <div className="text-[9px] mb-[10px]" style={{ color: 'rgba(255,255,255,0.6)' }}>{selectedBanner.subtitle}</div>}
-                      {selectedBanner.ctaLabel && <span className="inline-block px-3 py-[5px] rounded-[5px] text-[9px] font-bold" style={{ background: '#E8873A', color: '#1a1a1a' }}>{selectedBanner.ctaLabel}</span>}
-                    </div>
-                    {selectedBanner.desktopImageUrl ? (
-                      <div className="absolute right-0 top-0 bottom-0 w-[45%]">
-                        <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 z-10" style={{ background: 'linear-gradient(to right, #24140a, transparent)' }} />
-                      </div>
-                    ) : (
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center rounded-full text-[44px]"
-                        style={{ width: 90, height: 90, background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.12)' }}>{selectedBanner.emoji}</div>
-                    )}
-                  </div>
-                )}
-                {/* Menu banner preview */}
-                {selectedBanner.type === 'menu' && (
-                  <div className="flex items-center gap-3 px-4 py-[14px] rounded-lg m-3" style={{ background: '#FFF3E0', border: '1px solid rgba(212,114,42,0.15)' }}>
-                    {selectedBanner.desktopImageUrl ? (
-                      <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-12 h-12 object-cover rounded-md flex-shrink-0" />
-                    ) : (
-                      <span className="text-[36px] flex-shrink-0">{selectedBanner.emoji}</span>
-                    )}
-                    <div>
-                      <div className="font-display text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>{selectedBanner.title}</div>
-                      {selectedBanner.subtitle && <div className="text-[10px] mt-[2px]" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
-                      {selectedBanner.ctaLabel && <span className="inline-block mt-[6px] px-[10px] py-1 rounded-[5px] text-[9px] font-bold text-white" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</span>}
-                    </div>
-                  </div>
-                )}
-                {/* Popup preview */}
-                {selectedBanner.type === 'popup' && (
-                  <div className="flex items-center justify-center rounded-lg p-4" style={{ background: 'rgba(0,0,0,0.35)' }}>
-                    <div className="rounded-[10px] p-4 text-center overflow-hidden" style={{ width: 180, background: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-                      {selectedBanner.desktopImageUrl ? (
-                        <div className="w-full h-[100px] -mt-4 -mx-4 mb-3 relative">
-                          <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="text-[28px] mb-2">{selectedBanner.emoji}</div>
-                      )}
-                      <div className="font-display text-xs font-bold mb-1" style={{ color: 'var(--text-primary)' }}>{selectedBanner.title}</div>
-                      {selectedBanner.subtitle && <div className="text-[10px] mb-[10px] leading-[1.5]" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
-                      {selectedBanner.ctaLabel && <div className="block px-[14px] py-[6px] rounded-[6px] text-[10px] font-bold text-white mb-[6px]" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</div>}
-                      <div className="text-[9px]" style={{ color: 'var(--text-muted)' }}>No thanks</div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
 
-              {/* Detail section */}
+              {/* ══ MENU ══ */}
+              {selectedBanner.type === 'menu' && (
+                <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                  <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                    <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com/menu</span>
+                    </div>
+                  </div>
+                  <div className="p-3" style={{ background: '#fafafa' }}>
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: '#FFF3E0', border: '1px solid rgba(212,114,42,0.18)', boxShadow: '0 2px 8px rgba(212,114,42,0.07)' }}>
+                      {selectedBanner.desktopImageUrl ? (
+                        <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0" style={{ border: '1px solid rgba(212,114,42,0.15)' }} />
+                      ) : (
+                        <span className="text-[38px] flex-shrink-0">{selectedBanner.emoji}</span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-[13px] truncate" style={{ color: 'var(--text-primary)', fontFamily: "'Montserrat',sans-serif" }}>{selectedBanner.title}</div>
+                        {selectedBanner.subtitle && <div className="text-[10px] mt-[2px] truncate" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
+                        {selectedBanner.ctaLabel && (
+                          <span className="inline-block mt-2 px-[10px] py-[4px] rounded-[6px] text-[9px] font-bold text-white" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ══ POPUP ══ */}
+              {selectedBanner.type === 'popup' && (
+                <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                  <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                    <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center py-6" style={{ background: 'rgba(0,0,0,0.38)' }}>
+                    <div className="rounded-[14px] overflow-hidden text-center" style={{ width: 190, background: '#fff', boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+                      {selectedBanner.desktopImageUrl ? (
+                        <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-full object-cover block" style={{ height: 110 }} />
+                      ) : (
+                        <div className="flex items-center justify-center text-[34px]" style={{ height: 80, background: 'var(--orange-light)' }}>{selectedBanner.emoji}</div>
+                      )}
+                      <div className="px-4 pb-4 pt-3">
+                        <div className="font-bold text-[12px] mb-[4px]" style={{ color: 'var(--text-primary)', fontFamily: "'Montserrat',sans-serif" }}>{selectedBanner.title}</div>
+                        {selectedBanner.subtitle && <div className="text-[10px] mb-3 leading-[1.5]" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
+                        {selectedBanner.ctaLabel && (
+                          <div className="px-4 py-[7px] rounded-[8px] text-[10px] font-bold text-white mb-2" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</div>
+                        )}
+                        <div className="text-[9px]" style={{ color: 'var(--text-muted)' }}>No thanks</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Banner details ── */}
               <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)' }}>
                 <div className="flex items-center justify-between px-[14px] py-[10px]" style={{ background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
                   <span className="text-[11px] font-bold" style={{ color: 'var(--text-primary)' }}>Banner details</span>
@@ -487,7 +589,7 @@ export const BannerSettingsPage: React.FC = () => {
                   <DetailRow label="Title" value={selectedBanner.title} />
                   {selectedBanner.subtitle && <DetailRow label="Subtitle" value={selectedBanner.subtitle} />}
                   {selectedBanner.ctaLabel && <DetailRow label="CTA label" value={selectedBanner.ctaLabel} />}
-                  {selectedBanner.ctaLink && <DetailRow label="CTA link" value={`fuskit.com${selectedBanner.ctaLink}`} isLink />}
+                  {selectedBanner.ctaLink && <DetailRow label="CTA link" value={`fuskit.com \u2192 ${selectedBanner.ctaLink.replace(/^\//, '')}`} isLink />}
                   <DetailRow label="Status" value={`${STATUS_STYLES[selectedBanner.status].label}${selectedBanner.status === 'active' ? ' — Live now' : ''}`}
                     valueColor={STATUS_STYLES[selectedBanner.status].color} />
                   <DetailRow label="Schedule" value={selectedBanner.schedule} />

@@ -75,8 +75,8 @@ const CategoriesCard: React.FC<{ data?: DashboardStats['categories'] }> = ({ dat
     style={cardBase}
     {...cardHoverProps}
   >
-    <img src={catImg} alt="" className="absolute -right-2 top-1/2 -translate-y-1/2 w-[140px] h-[140px] object-contain pointer-events-none opacity-90" style={{ transform: 'translate(10%, -20%)' }} />
-    
+    <img src={catImg} alt="" className="absolute -right-2 top-1/2 -translate-y-1/2 w-[45%] h-auto max-w-[140px] object-contain pointer-events-none opacity-90" style={{ transform: 'translate(10%, -20%)' }} />
+
     <div className="flex flex-col items-start relative z-10 w-full">
       <div className="text-[17px] font-bold" style={{ color: '#1B1512' }}>Categories</div>
       <div className="text-[13px] mt-[1px]" style={{ color: '#979797' }}>Last Week</div>
@@ -107,7 +107,7 @@ const MenuItemsCard: React.FC<{ data?: DashboardStats['menuItems'] }> = ({ data 
     style={cardBase}
     {...cardHoverProps}
   >
-    <img src={menuImg} alt="" className="absolute right-[-10px] top-1/2 w-[150px] h-[150px] object-contain pointer-events-none opacity-90" style={{ transform: 'translate(10%, -20%)' }} />
+    <img src={menuImg} alt="" className="absolute right-[-10px] top-1/2 w-[45%] h-auto max-w-[150px] object-contain pointer-events-none opacity-90" style={{ transform: 'translate(10%, -20%)' }} />
 
     <div className="flex flex-col items-start relative z-10 w-full">
       <div className="text-[17px] font-bold" style={{ color: '#1B1512' }}>Menu Items</div>
@@ -139,7 +139,7 @@ const ActiveStoresCard: React.FC<{ data?: DashboardStats['stores'] }> = ({ data 
     style={cardBase}
     {...cardHoverProps}
   >
-    <img src={storeImg} alt="" className="absolute -right-[15px] top-[40%] w-[130px] h-[130px] object-contain pointer-events-none opacity-90" />
+    <img src={storeImg} alt="" className="absolute -right-[15px] top-[40%] w-[42%] h-auto max-w-[130px] object-contain pointer-events-none opacity-90" />
 
     <div className="flex flex-col items-start relative z-10 w-full">
       <div className="text-[17px] font-bold" style={{ color: '#1B1512' }}>Active Stores</div>
@@ -152,14 +152,17 @@ const ActiveStoresCard: React.FC<{ data?: DashboardStats['stores'] }> = ({ data 
     </div>
 
     <div className="w-full mt-auto pt-1 flex flex-col items-start gap-[6px] relative z-10">
-      <div className="flex flex-col items-start gap-[6px] w-full">
-        {(data?.names || []).slice(0, 2).map((name, i) => (
+      <div
+        className="flex flex-col items-start gap-[6px] w-full overflow-y-auto no-scrollbar"
+        style={{ maxHeight: 60 }}
+      >
+        {(data?.names || []).map((name, i) => (
           <div
             key={i}
-            className="flex items-center gap-[8px] text-[11px] font-medium w-full max-w-[110px] py-[3px] px-[12px] rounded-[6px] border border-[#41735D]"
+            className="flex items-center gap-[8px] text-[11px] font-medium w-full max-w-[110px] py-[3px] px-[12px] rounded-[6px] border border-[#41735D] flex-shrink-0"
             style={{ background: 'rgba(65, 115, 93, 0.05)', color: '#41735D' }}
           >
-            <span className="w-[4px] h-[4px] rounded-full" style={{ background: '#41735D', boxShadow: '0 0 2px #41735D' }} />
+            <span className="w-[4px] h-[4px] rounded-full flex-shrink-0" style={{ background: '#41735D', boxShadow: '0 0 2px #41735D' }} />
             {name.split(' - ')[0].split(' — ')[0]}
           </div>
         ))}
@@ -200,9 +203,9 @@ const RegisteredUsersCard: React.FC<{ data?: DashboardStats['users'] }> = ({ dat
       </div>
       <span
         className="text-[10px] font-bold px-[7px] py-[3px] rounded-[20px]"
-        style={{ 
-          background: (data?.changePercent || 0) >= 0 ? 'var(--green-bg)' : 'rgba(201,64,64,0.1)', 
-          color: (data?.changePercent || 0) >= 0 ? 'var(--green)' : 'var(--red)' 
+        style={{
+          background: (data?.changePercent || 0) >= 0 ? 'var(--green-bg)' : 'rgba(201,64,64,0.1)',
+          color: (data?.changePercent || 0) >= 0 ? 'var(--green)' : 'var(--red)'
         }}
       >
         {(data?.changePercent || 0) > 0 ? '+' : ''}{data?.changePercent || 0}%
