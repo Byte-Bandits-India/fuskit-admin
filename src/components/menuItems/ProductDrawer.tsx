@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Image } from 'antd';
 import type { Product } from '@/pages/MenuItemsPage';
 
 interface ProductDrawerProps {
@@ -392,56 +393,76 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
               style={{ display: 'none' }}
             />
 
-            {imagePreviews.length > 0 ? (
-              <div className="flex flex-col gap-[8px]">
-                <div className="grid gap-[6px]" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                  {imagePreviews.map((src, i) => (
-                    <div key={i} className="relative rounded-lg overflow-hidden group/img" style={{ height: 70 }}>
-                      <img src={src} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        onClick={e => { e.stopPropagation(); removeImage(i); }}
-                        className="absolute top-1 right-1 flex items-center justify-center rounded-full opacity-0 group-hover/img:opacity-100 transition-opacity"
-                        style={{ width: 18, height: 18, background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', color: '#fff' }}
-                      >
-                        <svg viewBox="0 0 24 24" className="w-[9px] h-[9px]" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-                      </button>
-                    </div>
-                  ))}
-                  {imagePreviews.length < 5 && (
-                    <div
-                      onClick={() => imageInputRef.current?.click()}
-                      className="flex items-center justify-center rounded-lg cursor-pointer transition-all"
-                      style={{ height: 70, background: 'var(--bg-card2)', border: '2px dashed var(--border-strong)' }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
-                    >
-                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}><path d="M12 5v14M5 12h14" /></svg>
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => imageInputRef.current?.click()}
-                  className="text-[10px] cursor-pointer text-left"
-                  style={{ background: 'none', border: 'none', color: 'var(--orange)', textDecoration: 'underline', padding: 0 }}
-                >
-                  Add more (up to 5)
-                </button>
-              </div>
-            ) : (
+            {/* Always visible drop zone (unless 5 images reached) */}
+            {imagePreviews.length < 5 && (
               <div
                 onClick={() => imageInputRef.current?.click()}
                 onDrop={handleImageDrop}
                 onDragOver={handleDragOver}
-                className="w-full flex flex-col items-center gap-[6px] rounded-[10px] p-4 cursor-pointer transition-all text-center"
-                style={{ background: 'var(--bg-card2)', border: '2px dashed var(--border-strong)' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)'; (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}
+                className="w-full flex items-center justify-center gap-2 rounded-xl cursor-pointer transition-all mb-3 relative overflow-hidden"
+                style={{
+                  height: imagePreviews.length > 0 ? 52 : 150,
+                  flexDirection: imagePreviews.length > 0 ? 'row' : 'column',
+                  background: 'var(--bg-card2)',
+                  border: `2px dashed ${imagePreviews.length > 0 ? 'var(--border-strong)' : 'var(--border-strong)'}`,
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)';
+                }}
               >
-                <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-                </svg>
-                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click or drag images here</span>
-                <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>PNG, JPG, WebP · Max 5MB each · Up to 5 images</small>
+                {imagePreviews.length > 0 ? (
+                  <>
+                    <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--orange)' }}>
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span className="text-xs font-semibold" style={{ color: 'var(--orange)' }}>Add more images ({imagePreviews.length}/5)</span>
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                    </svg>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click or drag images here</span>
+                    <small className="text-[10px]" style={{ color: 'var(--text-muted)' }}>PNG, JPG, WebP · Max 5MB each · Up to 5 images</small>
+                  </>
+                )}
+              </div>
+            )}
+
+            {imagePreviews.length > 0 && (
+              <div className="flex flex-col gap-[8px]">
+                <div className="mt-[4px] rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)', background: 'var(--bg-card2)' }}>
+                  <div className="flex items-center justify-between px-3 py-[7px]" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Image previews</span>
+                    <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{imagePreviews.length} / 5</span>
+                  </div>
+                  <div className="p-3 grid gap-[10px]" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    {imagePreviews.map((src, i) => (
+                      <div key={i} className="relative rounded-lg overflow-hidden group/img" style={{ height: 90, border: '1px solid var(--border)' }}>
+                        <Image
+                          src={src}
+                          alt={`Preview ${i + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                          preview={{
+                            mask: <span style={{ fontSize: 10, fontWeight: 600 }}>Preview</span>,
+                          }}
+                        />
+                        <button
+                          onClick={e => { e.stopPropagation(); removeImage(i); }}
+                          className="absolute top-[4px] right-[4px] flex items-center justify-center rounded-full opacity-0 group-hover/img:opacity-100 transition-opacity z-10"
+                          style={{ width: 22, height: 22, background: 'var(--red)', border: 'none', cursor: 'pointer', color: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
+                        >
+                          <svg viewBox="0 0 24 24" className="w-[10px] h-[10px]" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </FormGroup>

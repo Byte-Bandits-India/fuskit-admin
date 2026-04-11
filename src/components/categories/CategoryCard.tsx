@@ -65,10 +65,20 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         className="relative overflow-hidden flex items-center justify-center"
         style={{ height: 130, background: category.bgColor }}
       >
-        {/* Background emoji (large, faded) */}
-        <div className="absolute text-[64px] opacity-[0.18] select-none">{category.emoji}</div>
-        {/* Foreground emoji */}
-        <div className="text-[48px] z-[1] select-none">{category.emoji}</div>
+        {/* Background emoji (large, faded) – hidden when an image is present */}
+        {!category.imageUrl && (
+          <div className="absolute text-[64px] opacity-[0.18] select-none">{category.emoji}</div>
+        )}
+        {/* Foreground: image if available, else emoji */}
+        {category.imageUrl ? (
+          <img
+            src={category.imageUrl}
+            alt={category.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="text-[48px] z-[1] select-none">{category.emoji}</div>
+        )}
 
         {/* Icon badge */}
         <div

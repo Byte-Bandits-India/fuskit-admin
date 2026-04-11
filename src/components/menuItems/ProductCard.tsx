@@ -73,10 +73,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         className="relative overflow-hidden flex items-center justify-center"
         style={{ height: 140, background: product.bgColor }}
       >
-        <div className="absolute inset-0 flex items-center justify-center text-[80px] opacity-10 select-none">
-          {product.emoji}
-        </div>
-        <div className="text-[52px] z-[1] select-none">{product.emoji}</div>
+        {/* Background faded emoji – hidden when a real image exists */}
+        {!product.imageUrls?.[0] && (
+          <div className="absolute inset-0 flex items-center justify-center text-[80px] opacity-10 select-none">
+            {product.emoji}
+          </div>
+        )}
+        {/* Foreground: first imageUrl if available, else emoji */}
+        {product.imageUrls?.[0] ? (
+          <img
+            src={product.imageUrls[0]}
+            alt={product.name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="text-[52px] z-[1] select-none">{product.emoji}</div>
+        )}
 
         {/* Badges top-left */}
         {product.badges.length > 0 && (

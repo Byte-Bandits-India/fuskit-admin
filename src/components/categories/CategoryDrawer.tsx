@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Image } from 'antd';
 import type { Category } from '@/pages/CategoriesPage';
 
 interface CategoryDrawerProps {
@@ -154,46 +155,40 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
               style={{ display: 'none' }}
             />
 
-            {/* Drop zone */}
+            {/* Drop zone – compact when image exists, full when empty */}
             <div
               onClick={handleDropZoneClick}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="w-full flex flex-col items-center justify-center gap-2 rounded-xl cursor-pointer transition-all relative overflow-hidden"
+              className="w-full flex flex-row items-center justify-center gap-2 rounded-xl cursor-pointer transition-all"
               style={{
-                height: 150,
-                background: imagePreview ? 'transparent' : 'var(--bg-card2)',
+                height: imagePreview ? 52 : 150,
+                flexDirection: imagePreview ? 'row' : 'column',
+                background: 'var(--bg-card2)',
                 border: `2px dashed ${imagePreview ? 'var(--orange)' : 'var(--border-strong)'}`,
               }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.borderColor = 'var(--orange)';
-                if (!imagePreview) (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)';
+                (e.currentTarget as HTMLElement).style.background = 'var(--orange-bg)';
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLElement).style.borderColor = imagePreview ? 'var(--orange)' : 'var(--border-strong)';
-                if (!imagePreview) (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)';
+                (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)';
               }}
             >
               {imagePreview ? (
                 <>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                    style={{ position: 'absolute', inset: 0 }}
-                  />
-                  <div
-                    className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 transition-opacity"
-                    style={{ background: 'rgba(0,0,0,0.45)' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0'; }}
-                  >
-                    <span className="text-white text-[11px] font-semibold">Click to change</span>
-                  </div>
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--orange)' }}>
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                  </svg>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--orange)' }}>Click to change image</span>
                 </>
               ) : (
                 <>
-                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
+                  {selectedEmoji && (
+                    <div className="text-[36px] mb-1 select-none">{selectedEmoji}</div>
+                  )}
+                  <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: 'var(--text-muted)' }}>
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" />
                   </svg>
                   <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Click or drag to upload image</span>
@@ -202,17 +197,55 @@ export const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
               )}
             </div>
 
+            {/* ── Separate image preview card (shown when an image exists) ── */}
             {imagePreview && (
-              <button
-                onClick={e => { e.stopPropagation(); setImagePreview(null); setImageFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                className="mt-[5px] text-[10px] cursor-pointer"
-                style={{ background: 'none', border: 'none', color: 'var(--red)', textDecoration: 'underline', padding: 0 }}
+              <div
+                className="mt-[10px] rounded-xl overflow-hidden"
+                style={{ border: '1px solid var(--border)' }}
               >
-                Remove image
-              </button>
+                {/* Header row */}
+                <div
+                  className="flex items-center justify-between px-3 py-[7px]"
+                  style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card2)' }}
+                >
+                  <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                    Image preview
+                  </span>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation();
+                      setImagePreview(null);
+                      setImageFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="text-[10px] cursor-pointer"
+                    style={{ background: 'none', border: 'none', color: 'var(--red)', textDecoration: 'underline', padding: 0 }}
+                  >
+                    Remove image
+                  </button>
+                </div>
+
+                {/* AntD Image – click opens full lightbox, no conflict with drop zone */}
+                <Image
+                  src={imagePreview}
+                  alt="Category preview"
+                  style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
+                  preview={{
+                    mask: (
+                      <span style={{ fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        View full image
+                      </span>
+                    ),
+                  }}
+                />
+              </div>
             )}
 
-            <div className="text-[10px] mt-[5px]" style={{ color: 'var(--text-muted)' }}>
+            <div className="text-[10px] mt-[6px]" style={{ color: 'var(--text-muted)' }}>
               This image shows as the category card background on the website.
             </div>
           </div>
