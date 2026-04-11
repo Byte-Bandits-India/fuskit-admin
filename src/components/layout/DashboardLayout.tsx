@@ -31,6 +31,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
       });
   }, [onLogout]);
 
+  // Track page views in GA4 when activeId changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'gtag' in window) {
+      (window as any).gtag('event', 'page_view', {
+        page_title: `Admin - ${activeId}`,
+        page_location: window.location.href,
+        page_path: `/admin/${activeId}`
+      });
+    }
+  }, [activeId]);
+
   // Open on desktop, closed on mobile by default
   const [sidebarOpen, setSidebarOpen] = useState(
     typeof window !== 'undefined' ? window.innerWidth >= 768 : true

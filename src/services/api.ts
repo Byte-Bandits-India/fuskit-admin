@@ -768,11 +768,25 @@ export interface StoreVisitsResponse {
   days: string[];
 }
 
+export interface GA4StatsResponse {
+  data: {
+    rowCount: number;
+    rows: any[];
+    totals: any[];
+    maximums: any[];
+    minimums: any[];
+    metricHeaders: any[];
+    dimensionHeaders: any[];
+  }
+}
+
 export const analyticsApi = {
   pageVisits: (range?: string) => 
     request<PageVisitsResponse>(`/analytics/page-visits${range ? `?range=${range}` : ''}`),
   storeVisits: (range?: string) => 
-    request<StoreVisitsResponse>(`/analytics/store-visits${range ? `?range=${range}` : ''}`)
+    request<StoreVisitsResponse>(`/analytics/store-visits${range ? `?range=${range}` : ''}`),
+  ga4Stats: () =>
+    request<GA4StatsResponse>('/analytics/ga4-stats')
 };
 
 // ─── Activity ─────────────────────────────────────────────────────────────
