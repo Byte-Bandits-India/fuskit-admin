@@ -170,23 +170,10 @@ export const CategoriesPage: React.FC = () => {
     const cat = categories.find(c => c.id === id);
     if (!cat) return;
     const newVisible = !cat.visible;
-    // Optimistic update
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, visible: newVisible } : c));
-    setMeta(prev => ({
-      ...prev,
-      visible: newVisible ? prev.visible + 1 : prev.visible - 1,
-      hidden: newVisible ? prev.hidden - 1 : prev.hidden + 1,
-    }));
     try {
       await categoriesApi.update(id, { visible: newVisible });
+      fetchCategories();
     } catch {
-      // Revert on failure
-      setCategories(prev => prev.map(c => c.id === id ? { ...c, visible: !newVisible } : c));
-      setMeta(prev => ({
-        ...prev,
-        visible: newVisible ? prev.visible - 1 : prev.visible + 1,
-        hidden: newVisible ? prev.hidden + 1 : prev.hidden - 1,
-      }));
       showToast('Failed to update visibility', 'error');
     }
   };
@@ -213,14 +200,8 @@ export const CategoriesPage: React.FC = () => {
     setDeleteLoading(true);
     try {
       await categoriesApi.delete(deletingCategory.id);
-      setCategories(prev => prev.filter(c => c.id !== deletingCategory.id));
-      setMeta(prev => ({
-        ...prev,
-        total: prev.total - 1,
-        visible: deletingCategory.visible ? prev.visible - 1 : prev.visible,
-        hidden: !deletingCategory.visible ? prev.hidden - 1 : prev.hidden,
-      }));
       showToast(`"${deletingCategory.name}" deleted`, 'success');
+      fetchCategories();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to delete category', 'error');
     } finally {
@@ -246,9 +227,8 @@ export const CategoriesPage: React.FC = () => {
       }
       try {
         const res = await categoriesApi.update(editingCategory.id, fd);
-        const updated = toCategory(res.data);
-        setCategories(prev => prev.map(c => c.id === editingCategory.id ? updated : c));
-        showToast(`"${updated.name}" updated`, 'success');
+        showToast(`"Category updated"`, 'success');
+        fetchCategories();
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Failed to update category', 'error');
       }
@@ -256,15 +236,8 @@ export const CategoriesPage: React.FC = () => {
       fd.append('type', 'Veg');
       try {
         const res = await categoriesApi.create(fd);
-        const created = toCategory(res.data);
-        setCategories(prev => [...prev, created]);
-        setMeta(prev => ({
-          ...prev,
-          total: prev.total + 1,
-          visible: created.visible ? prev.visible + 1 : prev.visible,
-          hidden: !created.visible ? prev.hidden + 1 : prev.hidden,
-        }));
-        showToast(`"${created.name}" created`, 'success');
+        showToast(`"Category created"`, 'success');
+        fetchCategories();
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Failed to create category', 'error');
       }

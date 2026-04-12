@@ -237,12 +237,10 @@ export const MenuItemsPage: React.FC = () => {
     const prod = products.find(p => p.id === id);
     if (!prod) return;
     const newVisible = !prod.visible;
-    // Optimistic update
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, visible: newVisible } : p));
     try {
       await menuItemsApi.update(id, { visible: newVisible });
+      fetchAll();
     } catch {
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, visible: !newVisible } : p));
       showToast('Failed to update visibility', 'error');
     }
   };
@@ -269,16 +267,8 @@ export const MenuItemsPage: React.FC = () => {
     setDeleteLoading(true);
     try {
       await menuItemsApi.delete(deletingProduct.id);
-      setProducts(prev => prev.filter(p => p.id !== deletingProduct.id));
-      setMeta(prev => ({
-        ...prev,
-        total: prev.total - 1,
-        visible: deletingProduct.visible ? prev.visible - 1 : prev.visible,
-        hidden:  !deletingProduct.visible ? prev.hidden - 1 : prev.hidden,
-        bestsellers: deletingProduct.badges.includes('bestseller') ? prev.bestsellers - 1 : prev.bestsellers,
-        discounted:  (deletingProduct.discountPercent ?? 0) > 0 ? prev.discounted - 1 : prev.discounted,
-      }));
       showToast(`"${deletingProduct.name}" deleted`, 'success');
+      fetchAll();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to delete item', 'error');
     } finally {
@@ -326,8 +316,8 @@ export const MenuItemsPage: React.FC = () => {
     if (drawerMode === 'edit' && editingProduct) {
       try {
         const res = await menuItemsApi.update(editingProduct.id, fd);
-        setProducts(prev => prev.map(p => p.id === editingProduct.id ? toProduct(res.data) : p));
-        showToast(`"${res.data.name}" updated`, 'success');
+        showToast(`"Menu item updated"`, 'success');
+        fetchAll();
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Failed to update item', 'error');
       }
@@ -337,17 +327,8 @@ export const MenuItemsPage: React.FC = () => {
       
       try {
         const res = await menuItemsApi.create(fd);
-        const created = toProduct(res.data);
-        setProducts(prev => [...prev, created]);
-        setMeta(prev => ({
-          ...prev,
-          total: prev.total + 1,
-          visible: created.visible ? prev.visible + 1 : prev.visible,
-          hidden:  !created.visible ? prev.hidden + 1 : prev.hidden,
-          bestsellers: created.badges.includes('bestseller') ? prev.bestsellers + 1 : prev.bestsellers,
-          discounted:  (created.discountPercent ?? 0) > 0 ? prev.discounted + 1 : prev.discounted,
-        }));
-        showToast(`"${created.name}" created`, 'success');
+        showToast(`"Menu item created"`, 'success');
+        fetchAll();
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Failed to create item', 'error');
       }

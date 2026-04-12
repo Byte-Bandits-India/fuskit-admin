@@ -54,7 +54,12 @@ async function request<T>(path: string, options: RequestInit = {}, _retry = fals
 
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+    const fetchOptions: RequestInit = {
+      cache: 'no-store',
+      ...options,
+      headers,
+    };
+    res = await fetch(`${BASE_URL}${path}`, fetchOptions);
   } catch {
     throw new Error(
       `Cannot connect to the server (${BASE_URL}). ` +
