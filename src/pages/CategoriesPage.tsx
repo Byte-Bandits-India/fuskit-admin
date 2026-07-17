@@ -226,7 +226,7 @@ export const CategoriesPage: React.FC = () => {
         // Actually, let's keep it simple.
       }
       try {
-        const res = await categoriesApi.update(editingCategory.id, fd);
+        await categoriesApi.update(editingCategory.id, fd);
         showToast(`"Category updated"`, 'success');
         fetchCategories();
       } catch (err) {
@@ -235,7 +235,7 @@ export const CategoriesPage: React.FC = () => {
     } else {
       fd.append('type', 'Veg');
       try {
-        const res = await categoriesApi.create(fd);
+        await categoriesApi.create(fd);
         showToast(`"Category created"`, 'success');
         fetchCategories();
       } catch (err) {

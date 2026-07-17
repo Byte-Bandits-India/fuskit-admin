@@ -90,6 +90,7 @@ export const StoreDrawer: React.FC<StoreDrawerProps> = ({ open, mode, store, onC
   const [rating, setRating] = useState('');
   const [reviewCount, setReviewCount] = useState('');
   const [foundedYear, setFoundedYear] = useState('');
+  const [description, setDescription] = useState('');
 
   /* Populate form when opening in edit mode */
   useEffect(() => {
@@ -106,11 +107,23 @@ export const StoreDrawer: React.FC<StoreDrawerProps> = ({ open, mode, store, onC
         setMapsEmbed(store.mapsEmbed ?? '');
         setManagerName(store.managerName ?? '');
         setManagerPhone(store.managerPhone ?? '');
-        setHours(store.hours && Object.keys(store.hours).length > 0 ? store.hours : DEFAULT_HOURS);
+        const parsedHours = store.hours && typeof store.hours === 'object' ? store.hours : {};
+        const hoursWithDefaults = Object.fromEntries(
+          DAYS.map(day => [
+            day,
+            {
+              open: parsedHours[day]?.open ?? '10am',
+              close: parsedHours[day]?.close ?? '11pm',
+              closed: parsedHours[day]?.closed ?? false,
+            }
+          ])
+        );
+        setHours(hoursWithDefaults);
         setEnabled(store.enabled ?? true);
         setRating(store.rating != null ? String(store.rating) : '');
         setReviewCount(store.reviewCount != null ? String(store.reviewCount) : '');
         setFoundedYear(store.foundedYear != null ? String(store.foundedYear) : '');
+        setDescription(store.description ?? '');
       } else {
         setName(''); setCity(''); setState(''); setAddress('');
         setPhone(''); setWhatsapp(''); setEmail('');
@@ -119,6 +132,7 @@ export const StoreDrawer: React.FC<StoreDrawerProps> = ({ open, mode, store, onC
         setHours(DEFAULT_HOURS);
         setEnabled(true);
         setRating(''); setReviewCount(''); setFoundedYear('');
+        setDescription('');
       }
     }
   }, [open, mode, store]);
@@ -162,6 +176,7 @@ export const StoreDrawer: React.FC<StoreDrawerProps> = ({ open, mode, store, onC
       rating: rating ? parseFloat(rating) : undefined,
       reviewCount: reviewCount ? parseInt(reviewCount, 10) : undefined,
       foundedYear: foundedYear ? parseInt(foundedYear, 10) : undefined,
+      description: description.trim() || undefined,
     };
     onSave(payload);
     onClose();
@@ -217,6 +232,10 @@ export const StoreDrawer: React.FC<StoreDrawerProps> = ({ open, mode, store, onC
             <Field>
               <Label required>Full address</Label>
               <Textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Sea Cliff Conclave..." className="min-h-[64px]" />
+            </Field>
+            <Field>
+              <Label>Store Description</Label>
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. Welcome to Fusk-it, our flagship outlet..." className="min-h-[80px]" />
             </Field>
           </div>
 

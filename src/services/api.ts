@@ -508,6 +508,7 @@ export interface StoreDTO {
   exclusiveItemCount?: number;
   foundedYear?: number;
   displayOrder?: number;
+  description?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -545,6 +546,7 @@ export interface CreateStorePayload {
   reviewCount?: number;
   foundedYear?: number | null;
   displayOrder?: number;
+  description?: string;
 }
 
 export type UpdateStorePayload = Partial<CreateStorePayload> & { temporarilyClosed?: boolean };

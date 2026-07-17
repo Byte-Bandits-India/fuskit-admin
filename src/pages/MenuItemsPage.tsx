@@ -315,7 +315,7 @@ export const MenuItemsPage: React.FC = () => {
 
     if (drawerMode === 'edit' && editingProduct) {
       try {
-        const res = await menuItemsApi.update(editingProduct.id, fd);
+        await menuItemsApi.update(editingProduct.id, fd);
         showToast(`"Menu item updated"`, 'success');
         fetchAll();
       } catch (err) {
@@ -326,7 +326,7 @@ export const MenuItemsPage: React.FC = () => {
       fd.append('bgColor', bgColors[Math.floor(Math.random() * bgColors.length)]);
       
       try {
-        const res = await menuItemsApi.create(fd);
+        await menuItemsApi.create(fd);
         showToast(`"Menu item created"`, 'success');
         fetchAll();
       } catch (err) {

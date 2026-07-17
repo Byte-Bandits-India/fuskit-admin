@@ -21,8 +21,12 @@ const getImageUrl = (url?: string) => {
 };
 
 const VISIT_DATA = {
-  chennai: { total: '4,891', change: '↑ 12% vs last week', bars: [55, 65, 80, 60, 90, 100, 85] },
-  bangalore: { total: '3,204', change: '↑ 8% vs last week', bars: [40, 55, 70, 50, 80, 95, 75] }
+  store_chennai: { total: '4,891', change: '↑ 12% vs last week', bars: [55, 65, 80, 60, 90, 100, 85] },
+  store_vellore: { total: '1,204', change: '↑ 15% vs last week', bars: [30, 45, 50, 40, 60, 85, 90] },
+  store_bangalore: { total: '3,204', change: '↑ 8% vs last week', bars: [40, 55, 70, 50, 80, 95, 75] },
+  store_mumbai: { total: '2,150', change: '↑ 5% vs last week', bars: [35, 45, 55, 48, 70, 80, 72] },
+  store_delhi: { total: '1,890', change: '↑ 6% vs last week', bars: [30, 40, 60, 45, 65, 75, 70] },
+  store_hyderabad: { total: '2,500', change: '↑ 10% vs last week', bars: [45, 50, 65, 55, 75, 90, 85] }
 };
 
 /* ───────── SVG ICONS ───────── */
@@ -132,7 +136,7 @@ export const ManageStoresPage: React.FC = () => {
   const showOnWebsite = selectedStore?.enabled ?? false;
   const exclusives = selectedStore?.exclusiveItems ?? [];
   const gallery = selectedStore?.gallery ?? [];
-  const visits = VISIT_DATA[selectedId as keyof typeof VISIT_DATA] || VISIT_DATA.chennai;
+  const visits = VISIT_DATA[selectedId as keyof typeof VISIT_DATA] || VISIT_DATA.store_chennai;
 
   const handleAdd = () => { setDrawerMode('add'); setDrawerOpen(true); };
   const handleEdit = () => { setDrawerMode('edit'); setDrawerOpen(true); };
@@ -330,25 +334,28 @@ export const ManageStoresPage: React.FC = () => {
                 <DetailItem label="WhatsApp" value={selectedStore.whatsapp || '—'} href={selectedStore.whatsapp ? `https://wa.me/${selectedStore.whatsapp.replace(/[^0-9]/g, '')}` : undefined} />
                 <DetailItem label="Email" value={selectedStore.email || '—'} href={selectedStore.email ? `mailto:${selectedStore.email}` : undefined} />
                 <DetailItem label="Google Maps link" value={selectedStore.mapsLink?.replace('https://', '') || '—'} isLink href={selectedStore.mapsLink} />
+                <DetailItem label="Description" value={selectedStore.description || '—'} fullWidth />
               </div>
 
               {/* Map embed */}
-              {selectedStore.mapsEmbed ? (
-                <div 
-                  className="mt-[14px] w-full h-[180px] rounded-[10px] relative overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-none" 
-                  style={{ border: '1px solid var(--border)' }}
-                  dangerouslySetInnerHTML={{ __html: selectedStore.mapsEmbed }} 
+              <div 
+                className="mt-[14px] w-full h-[180px] rounded-[10px] relative overflow-hidden" 
+                style={{ border: '1px solid var(--border)' }}
+              >
+                <iframe 
+                  src={(() => {
+                    const embed = (selectedStore.mapsEmbed || '').trim();
+                    if (embed) {
+                      const match = embed.match(/src=["']([^"']+)["']/i);
+                      return match ? match[1] : embed;
+                    }
+                    return `https://maps.google.com/maps?q=${encodeURIComponent(selectedStore.address || '')}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+                  })()} 
+                  className="w-full h-full border-0 absolute inset-0"
+                  allowFullScreen 
+                  loading="lazy" 
                 />
-              ) : (
-                <div className="mt-[14px] w-full h-[180px] rounded-[10px] relative overflow-hidden flex flex-col items-center justify-center gap-2"
-                  style={{ background: 'linear-gradient(135deg,#e8f5e9,#c8e6c9)', border: '1px solid var(--border)' }}>
-                  <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(45,134,83,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(45,134,83,.08) 1px,transparent 1px)', backgroundSize: '24px 24px' }} />
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center z-[1]" style={{ background: 'var(--orange)', boxShadow: '0 4px 12px rgba(212,114,42,0.4)' }}>
-                    <MapPinIcon size={20} />
-                  </div>
-                  <div className="text-xs font-semibold z-[1]" style={{ color: 'var(--text-secondary)' }}>Google Maps embed — {selectedStore.address?.split(',')[0]}</div>
-                </div>
-              )}
+              </div>
               <div className="flex gap-2 mt-[10px]">
                 <MapBtn label="Update embed link" icon={<EditIcon />} onClick={handleEdit} />
                 <MapBtn label="Open in Maps" icon={<ExternalIcon />} onClick={() => { if (selectedStore.mapsLink) window.open(selectedStore.mapsLink, '_blank'); }} disabled={!selectedStore.mapsLink} />
