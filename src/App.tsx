@@ -6,6 +6,7 @@ import { MenuItemsPage } from '@/pages/MenuItemsPage';
 import { BannerSettingsPage } from '@/pages/BannerSettingsPage';
 import { ManageStoresPage } from '@/pages/ManageStoresPage';
 import { UsersPermissionsPage } from '@/pages/UsersPermissionsPage';
+import { FranchiseInquiriesPage } from '@/pages/FranchiseInquiriesPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { clearTokens } from '@/services/api';
 import './index.css';
@@ -52,6 +53,8 @@ function App() {
             return <ManageStoresPage />;
           case 'users-permissions':
             return <UsersPermissionsPage />;
+          case 'franchise-inquiries':
+            return <FranchiseInquiriesPage />;
           default:
             return <DashboardPage />;
         }

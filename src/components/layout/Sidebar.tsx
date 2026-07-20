@@ -250,6 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeId, onNavClick, isOpen, 
               {[
                 { id: 'banner-settings', label: 'Banner settings', mod: 'banners' },
                 { id: 'manage-stores', label: 'Manage Stores', badge: 2, mod: 'stores' },
+                { id: 'franchise-inquiries', label: 'Franchise Inquiries', mod: 'dashboard' },
               ]
               .filter(item => hasModuleViewPerm(user, item.mod))
               .map(item => (

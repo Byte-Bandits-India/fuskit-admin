@@ -54,6 +54,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
     'menu-items': ['Dashboard', 'Menu', 'Menu Items'],
     'banner-settings': ['Dashboard', 'Site settings', 'Banner settings'],
     'manage-stores': ['Dashboard', 'Site settings', 'Manage Stores'],
+    'franchise-inquiries': ['Dashboard', 'Site settings', 'Franchise Inquiries'],
     gallery: ['Dashboard', 'Site settings', 'Gallery'],
   };
 
@@ -99,6 +100,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
               'manage-stores': 'stores',
               'users-permissions': 'users',
               'dashboard': 'dashboard',
+              'franchise-inquiries': 'dashboard',
             };
             const reqMod = modIdMap[activeId];
             if (reqMod && currentUser && !hasModuleViewPerm(currentUser, reqMod)) {

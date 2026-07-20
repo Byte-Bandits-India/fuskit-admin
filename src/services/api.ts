@@ -826,3 +826,38 @@ export const notificationsApi = {
   markAllRead: () => request<{ message: string }>('/notifications/mark-all-read', { method: 'PATCH' })
 };
 
+// ─── Franchise Inquiries ──────────────────────────────────────────────────
+export interface FranchiseInquiryDTO {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  cityState: string;
+  message: string | null;
+  status: 'PENDING' | 'CONTACTED' | 'APPROVED' | 'REJECTED';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const franchiseApi = {
+  list: (params?: { page?: number; pageSize?: number; search?: string; status?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.page) q.append('page', String(params.page));
+    if (params?.pageSize) q.append('pageSize', String(params.pageSize));
+    if (params?.search) q.append('search', params.search);
+    if (params?.status) q.append('status', params.status);
+    const qs = q.toString();
+    return request<{
+      data: FranchiseInquiryDTO[];
+      pagination: { total: number; page: number; pageSize: number; totalPages: number };
+    }>(`/franchise${qs ? `?${qs}` : ''}`);
+  },
+  get: (id: string) => request<{ data: FranchiseInquiryDTO }>(`/franchise/${id}`),
+  updateStatus: (id: string, status: string) =>
+    request<{ data: FranchiseInquiryDTO }>(`/franchise/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    }),
+  delete: (id: string) => request<{ message: string }>(`/franchise/${id}`, { method: 'DELETE' })
+};
+
