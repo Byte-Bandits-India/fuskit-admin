@@ -57,7 +57,7 @@ function toProduct(dto: MenuItemDTO): Product {
   };
 }
 
-type FilterType = 'all' | 'visible' | 'bestseller' | 'veg';
+type FilterType = 'all' | 'visible' | 'bestseller' | 'veg' | 'nonveg';
 type SortType = 'default' | 'price-low' | 'price-high' | 'name' | 'recent';
 
 /* ─── Default meta ─── */
@@ -92,13 +92,6 @@ const EyeIcon = () => (
 const StarIcon = () => (
   <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]">
     <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" fill="currentColor" />
-  </svg>
-);
-
-const VegIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-[11px] h-[11px]">
-    <circle cx="8" cy="8" r="3" fill="currentColor" />
-    <path d="M2 5h6M2 11h6M16 13l-4 4 4 4M20 13l-4 4 4 4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
   </svg>
 );
 
@@ -224,6 +217,7 @@ export const MenuItemsPage: React.FC = () => {
     if (filter === 'visible')    result = result.filter(p => p.visible);
     if (filter === 'bestseller') result = result.filter(p => p.badges.includes('bestseller'));
     if (filter === 'veg')        result = result.filter(p => p.isVeg);
+    if (filter === 'nonveg')     result = result.filter(p => !p.isVeg);
 
     if (sortBy === 'price-low')  result = [...result].sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') result = [...result].sort((a, b) => b.price - a.price);
@@ -459,25 +453,30 @@ export const MenuItemsPage: React.FC = () => {
 
         {/* Filter pills */}
         {([
-          { key: 'all'        as FilterType, label: 'All',         icon: <AllIcon />  },
-          { key: 'visible'    as FilterType, label: 'Visible',     icon: <EyeIcon />  },
-          { key: 'bestseller' as FilterType, label: 'Bestsellers', icon: <StarIcon /> },
-          { key: 'veg'        as FilterType, label: 'Veg only',    icon: <VegIcon />  },
-        ]).map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className="flex items-center gap-[5px] px-3 py-[7px] rounded-[20px] text-[11px] cursor-pointer transition-all"
-            style={{
-              background: filter === f.key ? 'var(--orange-light)' : 'var(--bg-card)',
-              border: `1px solid ${filter === f.key ? 'var(--orange)' : 'var(--border)'}`,
-              color: filter === f.key ? 'var(--orange)' : 'var(--text-secondary)',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
-            {f.icon} {f.label}
-          </button>
-        ))}
+          { key: 'all'        as FilterType, label: 'All',         icon: <AllIcon />,  activeColor: 'var(--orange)', activeBg: 'var(--orange-light)' },
+          { key: 'visible'    as FilterType, label: 'Visible',     icon: <EyeIcon />,  activeColor: 'var(--blue)',   activeBg: 'var(--blue-bg)'     },
+          { key: 'bestseller' as FilterType, label: 'Bestsellers', icon: <StarIcon />, activeColor: '#C47A1A',       activeBg: 'rgba(196,122,26,0.10)' },
+          { key: 'veg'        as FilterType, label: '🌿 Veg',       icon: null,         activeColor: '#22a05a',       activeBg: '#e6f9ef'            },
+          { key: 'nonveg'     as FilterType, label: '🍖 Non-Veg',    icon: null,         activeColor: '#d43a1e',       activeBg: '#fdecea'            },
+        ]).map(f => {
+          const isActive = filter === f.key;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className="flex items-center gap-[5px] px-[11px] py-[7px] rounded-[20px] text-[11px] font-semibold cursor-pointer transition-all whitespace-nowrap"
+              style={{
+                background: isActive ? f.activeBg : 'var(--bg-card)',
+                border: `1.5px solid ${isActive ? f.activeColor : 'var(--border)'}`,
+                color: isActive ? f.activeColor : 'var(--text-secondary)',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              {f.icon && <span style={{ color: isActive ? f.activeColor : 'var(--text-secondary)' }}>{f.icon}</span>}
+              {f.label}
+            </button>
+          );
+        })}
 
         {/* Sort */}
         <select
@@ -495,7 +494,11 @@ export const MenuItemsPage: React.FC = () => {
 
       {/* ── Section Label ── */}
       <div className="text-[11px] font-bold uppercase tracking-[.08em]" style={{ color: 'var(--text-muted)' }}>
-        All products ({filteredProducts.length})
+        {filter === 'veg'     ? `🌿 Veg products (${filteredProducts.length})` :
+         filter === 'nonveg'  ? `🍖 Non-Veg products (${filteredProducts.length})` :
+         filter === 'bestseller' ? `⭐ Bestsellers (${filteredProducts.length})` :
+         filter === 'visible' ? `👁️ Visible products (${filteredProducts.length})` :
+                                `All products (${filteredProducts.length})`}
       </div>
 
       {/* ── Product Grid ── */}

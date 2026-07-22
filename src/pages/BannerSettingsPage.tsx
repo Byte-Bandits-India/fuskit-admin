@@ -60,17 +60,32 @@ const EyeIcon = () => (
 );
 
 /* ─── Helpers ─── */
-const getImageUrl = (url?: string) => {
+const getImageUrl = (url?: string | null): string => {
   if (!url) return '';
+  if (url.startsWith('blob:')) return url;
   const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:5001/api';
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-      return `${apiBase}${parsed.pathname.replace(/^\/api/, '')}${parsed.search}`;
+
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      const parsed = new URL(url);
+      const apiParsed = new URL(apiBase);
+      // Ensure localhost/127.0.0.1 URLs route to the current environment's backend host & port
+      if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        return `${apiParsed.protocol}//${apiParsed.host}${parsed.pathname}${parsed.search}`;
+      }
+      return url;
+    } catch {
+      return url;
     }
-  } catch (e) { }
-  if (url.startsWith('http')) return url;
-  return `${apiBase}${url.startsWith('/') ? '' : '/'}${url.replace(/^\/api/, '')}`;
+  }
+
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  try {
+    const apiParsed = new URL(apiBase);
+    return `${apiParsed.protocol}//${apiParsed.host}${cleanPath}`;
+  } catch {
+    return `${apiBase.replace(/\/api$/, '')}${cleanPath}`;
+  }
 };
 
 /* ─── Main Page ─── */
@@ -199,8 +214,12 @@ export const BannerSettingsPage: React.FC = () => {
         <StatCard icon="📊" bg="var(--blue-bg)" value={stats.types} label="Banner types" />
       </div>
 
+      {/* Homepage Sections Guide */}
+      <HomepageSectionsGuide />
+
       {/* Split layout */}
       <div className="flex flex-col lg:grid gap-[14px] flex-1" style={{ gridTemplateColumns: typeof window !== 'undefined' && window.innerWidth >= 1024 ? '420px 1fr' : '1fr' }}>
+
 
         {/* LEFT: Banner list */}
         <div className="flex flex-col gap-[10px]">
@@ -246,6 +265,23 @@ export const BannerSettingsPage: React.FC = () => {
               const tc = TYPE_COLORS[banner.type];
               const ss = STATUS_STYLES[banner.status];
               const isSelected = selectedBanner?.id === banner.id;
+              const cleanName = (banner.name || '').toLowerCase().trim();
+              const isReel = banner.type === 'menu' || cleanName.startsWith('reel');
+              const isLocation = cleanName.startsWith('location');
+              const isStory = cleanName.startsWith('story');
+
+              const cta = banner.ctaLink || '';
+              const isVideoCta = cta.includes('/uploads/banners/') ||
+                cta.includes('/api/uploads/banners/') ||
+                /\.(mp4|webm|mov|m4v)/i.test(cta);
+
+              const videoUrl = isVideoCta ? getImageUrl(cta) : null;
+              const imageUrl = (banner.desktopImageUrl || banner.mobileImageUrl)
+                ? getImageUrl(banner.desktopImageUrl || banner.mobileImageUrl)
+                : null;
+
+              const displayEmoji = isLocation ? '📍' : isStory ? '📖' : isReel ? '🎬' : banner.emoji;
+
               return (
                 <div
                   key={banner.id}
@@ -276,12 +312,44 @@ export const BannerSettingsPage: React.FC = () => {
                   {/* Thumbnail */}
                   <div
                     className="flex-shrink-0 flex items-center justify-center overflow-hidden relative"
-                    style={{ width: 80, minHeight: 70, background: banner.thumbBg }}
+                    style={{ width: 80, minHeight: 70, background: isLocation ? '#3a2312' : isStory ? '#EDE8DC' : banner.thumbBg }}
                   >
-                    {banner.desktopImageUrl ? (
-                      <img src={getImageUrl(banner.mobileImageUrl)} alt="" className="w-full h-full object-cover relative z-[1]" />
+                    {videoUrl ? (
+                      <video
+                        src={videoUrl}
+                        poster={imageUrl || undefined}
+                        className="w-full h-full object-cover relative z-[1]"
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                      />
+                    ) : imageUrl ? (
+                      <img src={imageUrl} alt="" className="w-full h-full object-cover relative z-[1]" />
+                    ) : isLocation ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-[6px] text-center select-none relative z-[1]" style={{ background: '#3a2312' }}>
+                        <span className="text-[8px] font-extrabold text-white leading-tight truncate max-w-full px-[2px]">
+                          {(banner.title || 'LOCATIONS').split('|')[0]}
+                        </span>
+                        <div className="flex gap-[4px] my-[3px]">
+                          {(() => {
+                            const parts = (banner.subtitle || '4|2|∞').split('|');
+                            return [parts[0] || '4', parts[1] || '2', parts[2] || '∞'].map((v, idx) => (
+                              <span key={idx} className="text-[11px] font-black text-[#F4611E]">{v}</span>
+                            ));
+                          })()}
+                        </div>
+                        <span className="text-[6px] font-bold text-white/50 tracking-widest uppercase">STORES</span>
+                      </div>
+                    ) : isStory ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-[6px] text-center select-none relative z-[1]" style={{ background: '#EDE8DC', color: '#2E1A0C' }}>
+                        <span className="text-[18px] mb-[1px]">📖</span>
+                        <span className="text-[8px] font-extrabold leading-none truncate max-w-full">
+                          {(banner.title || 'OUR STORY').split('|')[0]}
+                        </span>
+                      </div>
                     ) : (
-                      <span className="text-[28px] select-none relative z-[1]">{banner.emoji}</span>
+                      <span className="text-[28px] select-none relative z-[1]">{displayEmoji}</span>
                     )}
                     <div className="absolute inset-0 z-0" style={{ background: 'rgba(0,0,0,0.04)' }} />
                   </div>
@@ -324,7 +392,7 @@ export const BannerSettingsPage: React.FC = () => {
                     <div className="flex items-center gap-[6px] text-[10px]" style={{ color: 'var(--text-muted)' }}>
                       <span className="flex-shrink-0"><LinkIcon /></span>
                       <span className="truncate">
-                        {banner.ctaLink ? `fuskit.com → ${banner.ctaLink}` : 'Top bar · Text only'}
+                        {videoUrl ? 'Video reel attached' : banner.ctaLink ? `fuskit.com → ${banner.ctaLink}` : 'Top bar · Text only'}
                       </span>
                     </div>
 
@@ -433,149 +501,319 @@ export const BannerSettingsPage: React.FC = () => {
 
             {/* Preview body */}
             <div className="p-4 flex flex-col gap-[14px]">
+              {(() => {
+                const cleanName = (selectedBanner.name || '').toLowerCase().trim();
+                const isLocation = cleanName.includes('location');
+                const isStory = cleanName.includes('story');
+                const isReel = cleanName.includes('reel');
 
-              {/* ══ HERO ══ */}
-              {selectedBanner.type === 'hero' && (
-                <>
-                  {heroPreviewDevice === 'desktop' ? (
-                    /* Desktop — Mac browser chrome */
+                /* 1. LOCATIONS TEASER PREVIEW */
+                if (isLocation) {
+                  return (
+                    <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                      <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                        <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com — Locations section</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center gap-3 py-5 px-4 text-center" style={{ background: '#3a2312' }}>
+                        <div className="text-[11px] font-extrabold" style={{ color: '#fff', fontFamily: "'Montserrat',sans-serif" }}>
+                          {(selectedBanner.title || 'Find a Fusk-it Near|you.').split('|')[0]}
+                          {(selectedBanner.title || 'Find a Fusk-it Near|you.').includes('|') && (
+                            <span style={{ color: '#F4611E', fontStyle: 'italic' }}> {(selectedBanner.title || 'Find a Fusk-it Near|you.').split('|')[1]}</span>
+                          )}
+                        </div>
+                        {/* Stats row */}
+                        <div className="flex gap-5">
+                          {(() => {
+                            const parts = (selectedBanner.subtitle || '4|2|∞').split('|');
+                            return [
+                              { v: parts[0] || '4', l: 'STORES' },
+                              { v: parts[1] || '2', l: 'CITIES' },
+                              { v: parts[2] || '∞', l: 'GROWING' },
+                            ].map(s => (
+                              <div key={s.l} className="flex flex-col items-center">
+                                <span className="text-[18px] font-extrabold" style={{ color: '#F4611E' }}>{s.v}</span>
+                                <span className="text-[8px] font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>{s.l}</span>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                        {selectedBanner.ctaLabel && (
+                          <span className="px-3 py-[5px] rounded-lg text-[9px] font-bold text-white" style={{ background: '#F4611E' }}>{selectedBanner.ctaLabel}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                /* 2. STORY SECTION PREVIEW */
+                if (isStory) {
+                  return (
+                    <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                      <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                        <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com — Story section</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-0" style={{ background: '#fafafa' }}>
+                        {/* Left: image */}
+                        <div className="relative overflow-hidden" style={{ minHeight: 120, background: '#EDE8DC' }}>
+                          {(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl) ? (
+                            <img src={getImageUrl(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl)} alt="" className="w-full h-full object-cover absolute inset-0" />
+                          ) : (
+                            <div className="flex items-center justify-center h-full" style={{ minHeight: 120, color: 'rgba(46,26,12,0.2)', fontSize: 32 }}>📖</div>
+                          )}
+                        </div>
+                        {/* Right: text */}
+                        <div className="p-3 flex flex-col gap-1">
+                          {selectedBanner.ctaLabel && <span className="text-[7px] font-bold tracking-widest" style={{ color: '#F4611E' }}>{selectedBanner.ctaLabel.toUpperCase()}</span>}
+                          <div className="text-[11px] font-extrabold leading-tight" style={{ color: '#2E1A0C', fontFamily: "'Montserrat',sans-serif" }}>
+                            {(selectedBanner.title || '').split('|')[0]}
+                            {(selectedBanner.title || '').includes('|') && (
+                              <span style={{ color: '#F4611E', fontStyle: 'italic' }}> {selectedBanner.title.split('|')[1]}</span>
+                            )}
+                          </div>
+                          {selectedBanner.subtitle && (
+                            <div className="text-[9px] leading-[1.4] mt-1" style={{ color: '#5B4433' }}>
+                              {selectedBanner.subtitle.split('|')[0]}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                /* 3. REEL CARD PREVIEW */
+                if (isReel) {
+                  return (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                        <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                          <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                          <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                          <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                          <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                            <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+                          </div>
+                        </div>
+                        {/* Reel cards row (show just this one card) */}
+                        <div className="p-4 flex justify-center" style={{ background: '#fff' }}>
+                          <div className="relative rounded-[20px] overflow-hidden" style={{ width: 120, aspectRatio: '9/16', background: '#EDE8DC', boxShadow: '0 8px 24px rgba(46,26,12,0.12)' }}>
+                            {/* Badge */}
+                            <span className="absolute top-2 left-2 z-10 rounded-lg px-2 py-[2px] text-[8px] font-extrabold text-white" style={{ background: '#F4611E' }}>
+                              {selectedBanner.title || 'REEL'}
+                            </span>
+                            {/* Video or poster */}
+                            {(() => {
+                              const cta = selectedBanner.ctaLink || '';
+                              const isVideoCta = cta.includes('/uploads/banners/') ||
+                                cta.includes('/api/uploads/banners/') ||
+                                /\.(mp4|webm|mov|m4v)/i.test(cta) ||
+                                cta.startsWith('http') ||
+                                cta.startsWith('/');
+
+                              const videoUrl = (isVideoCta && cta) ? getImageUrl(cta) : null;
+                              const imageUrl = (selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl)
+                                ? getImageUrl(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl)
+                                : null;
+
+                              if (videoUrl) {
+                                return (
+                                  <video
+                                    src={videoUrl}
+                                    poster={imageUrl || undefined}
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                    muted
+                                    autoPlay
+                                    loop
+                                    playsInline
+                                  />
+                                );
+                              }
+
+                              if (imageUrl) {
+                                return (
+                                  <img src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                                );
+                              }
+
+                              return (
+                                <div className="absolute inset-0 flex items-center justify-center bg-[#2E1A0C]">
+                                  <svg viewBox="0 0 24 24" style={{ width: 28, height: 28, color: 'rgba(255,255,255,0.4)' }} fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <rect x="2" y="2" width="20" height="20" rx="2.18" /><polygon points="10 8 16 12 10 16 10 8" />
+                                  </svg>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Caption */}
+                      {selectedBanner.subtitle && (
+                        <p className="text-[11px] font-bold text-center" style={{ color: 'var(--text-primary)' }}>{selectedBanner.subtitle}</p>
+                      )}
+                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Reel card preview (9:16 vertical)</span>
+                    </div>
+                  );
+                }
+
+                /* 4. HERO BANNER PREVIEW */
+                if (selectedBanner.type === 'hero') {
+                  return (
+                    <>
+                      {heroPreviewDevice === 'desktop' ? (
+                        /* Desktop — Mac browser chrome */
+                        <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                          <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                            <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                            <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                            <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#28c840' }} />
+                            <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                              <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-[#111] overflow-hidden" style={{ minHeight: 120 }}>
+                            {(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl) ? (
+                              <img src={getImageUrl(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl)} alt="Desktop hero" className="w-full h-auto block" />
+                            ) : (
+                              <div className="flex flex-col items-center justify-center gap-2" style={{ minHeight: 160, color: 'rgba(255,255,255,0.3)' }}>
+                                <span className="text-[48px]">{selectedBanner.emoji}</span>
+                                <span className="text-[10px]">No desktop image uploaded</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Mobile — realistic phone bezel */
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="rounded-[36px] overflow-hidden" style={{
+                            width: 200, background: '#0a0a0a',
+                            border: '8px solid #1a1a1a',
+                            boxShadow: '0 0 0 1px #333, 0 20px 60px rgba(0,0,0,0.5)',
+                          }}>
+                            <div className="flex items-center justify-center" style={{ height: 26, background: '#000' }}>
+                              <div className="rounded-full" style={{ width: 60, height: 10, background: '#1a1a1a' }} />
+                            </div>
+                            <div className="overflow-hidden bg-[#111]" style={{ minHeight: 300 }}>
+                              {(selectedBanner.mobileImageUrl || selectedBanner.desktopImageUrl) ? (
+                                <img src={getImageUrl(selectedBanner.mobileImageUrl || selectedBanner.desktopImageUrl)} alt="Mobile hero" className="w-full h-auto block" />
+                              ) : (
+                                <div className="flex flex-col items-center justify-center gap-2" style={{ minHeight: 300, color: 'rgba(255,255,255,0.3)' }}>
+                                  <span className="text-[40px]">{selectedBanner.emoji}</span>
+                                  <span className="text-[9px] text-center px-4">No mobile image uploaded</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-center" style={{ height: 22, background: '#000' }}>
+                              <div className="rounded-full" style={{ width: 50, height: 4, background: '#333' }} />
+                            </div>
+                          </div>
+                          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Mobile preview (9:16)</span>
+                        </div>
+                      )}
+                    </>
+                  );
+                }
+
+                /* 5. MENU BANNER PREVIEW */
+                if (selectedBanner.type === 'menu') {
+                  return (
                     <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
                       <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
-                        <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#ff5f57' }} />
-                        <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#febc2e' }} />
-                        <div className="rounded-full flex-shrink-0" style={{ width: 7, height: 7, background: '#28c840' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                        <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                          <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com/menu</span>
+                        </div>
+                      </div>
+                      <div className="p-3" style={{ background: '#fafafa' }}>
+                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: '#FFF3E0', border: '1px solid rgba(212,114,42,0.18)', boxShadow: '0 2px 8px rgba(212,114,42,0.07)' }}>
+                          {(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl) ? (
+                            <img src={getImageUrl(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl)} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0" style={{ border: '1px solid rgba(212,114,42,0.15)' }} />
+                          ) : (
+                            <span className="text-[38px] flex-shrink-0">{selectedBanner.emoji}</span>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-[13px] truncate" style={{ color: 'var(--text-primary)', fontFamily: "'Montserrat',sans-serif" }}>{selectedBanner.title}</div>
+                            {selectedBanner.subtitle && <div className="text-[10px] mt-[2px] truncate" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
+                            {selectedBanner.ctaLabel && (
+                              <span className="inline-block mt-2 px-[10px] py-[4px] rounded-[6px] text-[9px] font-bold text-white" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                /* 6. POPUP BANNER PREVIEW */
+                if (selectedBanner.type === 'popup') {
+                  return (
+                    <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                      <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                        <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
                         <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                           <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
                         </div>
                       </div>
-                      <div className="w-full bg-[#111] overflow-hidden" style={{ minHeight: 120 }}>
-                        {selectedBanner.desktopImageUrl ? (
-                          <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="Desktop hero" className="w-full h-auto block" />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center gap-2" style={{ minHeight: 160, color: 'rgba(255,255,255,0.3)' }}>
-                            <span className="text-[48px]">{selectedBanner.emoji}</span>
-                            <span className="text-[10px]">No desktop image uploaded</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    /* Mobile — realistic phone bezel */
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="rounded-[36px] overflow-hidden" style={{
-                        width: 200, background: '#0a0a0a',
-                        border: '8px solid #1a1a1a',
-                        boxShadow: '0 0 0 1px #333, 0 20px 60px rgba(0,0,0,0.5)',
-                      }}>
-                        <div className="flex items-center justify-center" style={{ height: 26, background: '#000' }}>
-                          <div className="rounded-full" style={{ width: 60, height: 10, background: '#1a1a1a' }} />
-                        </div>
-                        <div className="overflow-hidden bg-[#111]" style={{ minHeight: 300 }}>
-                          {selectedBanner.mobileImageUrl ? (
-                            <img src={getImageUrl(selectedBanner.mobileImageUrl)} alt="Mobile hero" className="w-full h-auto block" />
+                      <div className="flex items-center justify-center py-6" style={{ background: 'rgba(0,0,0,0.38)' }}>
+                        <div className="rounded-[14px] overflow-hidden text-center" style={{ width: 190, background: '#fff', boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
+                          {(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl) ? (
+                            <img src={getImageUrl(selectedBanner.desktopImageUrl || selectedBanner.mobileImageUrl)} alt="" className="w-full object-cover block" style={{ height: 110 }} />
                           ) : (
-                            <div className="flex flex-col items-center justify-center gap-2" style={{ minHeight: 300, color: 'rgba(255,255,255,0.3)' }}>
-                              <span className="text-[40px]">{selectedBanner.emoji}</span>
-                              <span className="text-[9px] text-center px-4">No mobile image uploaded</span>
-                            </div>
+                            <div className="flex items-center justify-center text-[34px]" style={{ height: 80, background: 'var(--orange-light)' }}>{selectedBanner.emoji}</div>
                           )}
+                          <div className="px-4 pb-4 pt-3">
+                            <div className="font-bold text-[12px] mb-[4px]" style={{ color: 'var(--text-primary)', fontFamily: "'Montserrat',sans-serif" }}>{selectedBanner.title}</div>
+                            {selectedBanner.subtitle && <div className="text-[10px] mb-3 leading-[1.5]" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
+                            {selectedBanner.ctaLabel && (
+                              <div className="px-4 py-[7px] rounded-[8px] text-[10px] font-bold text-white mb-2" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</div>
+                            )}
+                            <div className="text-[9px]" style={{ color: 'var(--text-muted)' }}>No thanks</div>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-center" style={{ height: 22, background: '#000' }}>
-                          <div className="rounded-full" style={{ width: 50, height: 4, background: '#333' }} />
-                        </div>
                       </div>
-                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>Mobile preview (9:16)</span>
                     </div>
-                  )}
-                </>
-              )}
+                  );
+                }
 
-              {/* ══ ANNOUNCEMENT ══ */}
-              {selectedBanner.type === 'announcement' && (
-                <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
-                    <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+                /* 7. GENERIC ANNOUNCEMENT TOP-BAR PREVIEW */
+                return (
+                  <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+                    <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
+                      <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
+                      <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
+                      <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
+                      <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                        <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 py-[8px] px-4" style={{ background: '#E8873A' }}>
-                    {selectedBanner.emoji && <span className="text-[14px]">{selectedBanner.emoji}</span>}
-                    <span className="text-[11px] font-bold text-white">{selectedBanner.title}</span>
-                    {selectedBanner.ctaLabel && (
-                      <span className="text-[9px] font-bold px-2 py-[2px] rounded" style={{ background: 'rgba(0,0,0,0.2)', color: '#fff' }}>{selectedBanner.ctaLabel}</span>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2 p-4" style={{ background: '#fafafa' }}>
-                    {[70, 50, 60].map((w, i) => (
-                      <div key={i} className="rounded" style={{ height: 8, width: `${w}%`, background: '#e5e5e5' }} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ══ MENU ══ */}
-              {selectedBanner.type === 'menu' && (
-                <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
-                    <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com/menu</span>
-                    </div>
-                  </div>
-                  <div className="p-3" style={{ background: '#fafafa' }}>
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: '#FFF3E0', border: '1px solid rgba(212,114,42,0.18)', boxShadow: '0 2px 8px rgba(212,114,42,0.07)' }}>
-                      {selectedBanner.desktopImageUrl ? (
-                        <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0" style={{ border: '1px solid rgba(212,114,42,0.15)' }} />
-                      ) : (
-                        <span className="text-[38px] flex-shrink-0">{selectedBanner.emoji}</span>
+                    <div className="flex items-center justify-center gap-2 py-[8px] px-4" style={{ background: '#E8873A' }}>
+                      {selectedBanner.emoji && <span className="text-[14px]">{selectedBanner.emoji}</span>}
+                      <span className="text-[11px] font-bold text-white">{selectedBanner.title}</span>
+                      {selectedBanner.ctaLabel && (
+                        <span className="text-[9px] font-bold px-2 py-[2px] rounded" style={{ background: 'rgba(0,0,0,0.2)', color: '#fff' }}>{selectedBanner.ctaLabel}</span>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-[13px] truncate" style={{ color: 'var(--text-primary)', fontFamily: "'Montserrat',sans-serif" }}>{selectedBanner.title}</div>
-                        {selectedBanner.subtitle && <div className="text-[10px] mt-[2px] truncate" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
-                        {selectedBanner.ctaLabel && (
-                          <span className="inline-block mt-2 px-[10px] py-[4px] rounded-[6px] text-[9px] font-bold text-white" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</span>
-                        )}
-                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 p-4" style={{ background: '#fafafa' }}>
+                      {[70, 50, 60].map((w, i) => (
+                        <div key={i} className="rounded" style={{ height: 8, width: `${w}%`, background: '#e5e5e5' }} />
+                      ))}
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* ══ POPUP ══ */}
-              {selectedBanner.type === 'popup' && (
-                <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                  <div className="flex items-center gap-[5px] px-[10px]" style={{ height: 28, background: 'var(--bg-card2)', borderBottom: '1px solid var(--border)' }}>
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#ff5f57' }} />
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#febc2e' }} />
-                    <div className="rounded-full" style={{ width: 7, height: 7, background: '#28c840' }} />
-                    <div className="flex-1 mx-2 flex items-center px-[7px] rounded" style={{ height: 16, background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                      <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>fuskit.com</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center py-6" style={{ background: 'rgba(0,0,0,0.38)' }}>
-                    <div className="rounded-[14px] overflow-hidden text-center" style={{ width: 190, background: '#fff', boxShadow: '0 12px 40px rgba(0,0,0,0.28)' }}>
-                      {selectedBanner.desktopImageUrl ? (
-                        <img src={getImageUrl(selectedBanner.desktopImageUrl)} alt="" className="w-full object-cover block" style={{ height: 110 }} />
-                      ) : (
-                        <div className="flex items-center justify-center text-[34px]" style={{ height: 80, background: 'var(--orange-light)' }}>{selectedBanner.emoji}</div>
-                      )}
-                      <div className="px-4 pb-4 pt-3">
-                        <div className="font-bold text-[12px] mb-[4px]" style={{ color: 'var(--text-primary)', fontFamily: "'Montserrat',sans-serif" }}>{selectedBanner.title}</div>
-                        {selectedBanner.subtitle && <div className="text-[10px] mb-3 leading-[1.5]" style={{ color: 'var(--text-muted)' }}>{selectedBanner.subtitle}</div>}
-                        {selectedBanner.ctaLabel && (
-                          <div className="px-4 py-[7px] rounded-[8px] text-[10px] font-bold text-white mb-2" style={{ background: 'var(--orange)' }}>{selectedBanner.ctaLabel}</div>
-                        )}
-                        <div className="text-[9px]" style={{ color: 'var(--text-muted)' }}>No thanks</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* ── Banner details ── */}
               <div className="rounded-[10px] overflow-hidden" style={{ border: '1px solid var(--border)' }}>
@@ -625,3 +863,153 @@ const DetailRow: React.FC<{ label: string; value: string; isLink?: boolean; valu
     <span className="text-[11px] font-medium leading-[1.5]" style={{ color: valueColor || (isLink ? 'var(--blue)' : 'var(--text-primary)'), textDecoration: isLink ? 'underline' : 'none', cursor: isLink ? 'pointer' : 'default' }}>{value}</span>
   </div>
 );
+
+/* ─── Homepage Sections Guide ─── */
+const SECTION_GUIDE = [
+  {
+    icon: '🖼️',
+    label: 'Hero Section',
+    type: 'Hero banner',
+    typeColor: 'var(--orange)',
+    typeBg: 'var(--orange-light)',
+    name: 'Any name',
+    nameHint: 'First active hero banner is used',
+    fields: [
+      { field: 'Title', usage: 'Main heading lines (use \\n to split, e.g. EVERY SNACK\\nSTARTS A)' },
+      { field: 'Subtitle', usage: 'accent|body text (pipe-separated, e.g. story.|Body paragraph here)' },
+      { field: 'CTA Label', usage: 'Primary CTA button text (e.g. EXPLORE MENU)' },
+      { field: 'CTA Link', usage: 'Primary CTA href (e.g. #menu)' },
+      { field: 'Desktop image', usage: 'Full-width hero background image' },
+      { field: 'Mobile image', usage: 'Mobile background image (optional)' },
+    ],
+  },
+  {
+    icon: '🎬',
+    label: 'Reel Cards (×4)',
+    type: 'Menu banner',
+    typeColor: 'var(--blue)',
+    typeBg: 'var(--blue-bg)',
+    name: 'reel:1, reel:2, reel:3, reel:4',
+    nameHint: 'Name must start with "reel:" — up to 4 cards shown',
+    fields: [
+      { field: 'Title', usage: 'Badge chip text shown on card (e.g. REEL, VIRAL, NEW)' },
+      { field: 'Subtitle', usage: 'Caption text shown below the card' },
+      { field: 'CTA Link', usage: 'Video URL (e.g. /videos/1.mp4 or full URL)' },
+      { field: 'Desktop image', usage: 'Poster image shown if no video, or as fallback' },
+    ],
+  },
+  {
+    icon: '📖',
+    label: 'Story Section',
+    type: 'Announcement',
+    typeColor: 'var(--green)',
+    typeBg: 'var(--green-bg)',
+    name: 'story',
+    nameHint: 'Name must be exactly "story"',
+    fields: [
+      { field: 'CTA Label', usage: 'Eyebrow text (e.g. WELCOME TO FUSK-IT)' },
+      { field: 'Title', usage: 'Heading — use | to split main/accent (e.g. More Than a Cafe — A|Snack Culture.)' },
+      { field: 'Subtitle', usage: 'Body paragraphs — pipe-separated (e.g. Para 1.|Para 2.)' },
+      { field: 'Desktop image', usage: 'Left-side section image' },
+    ],
+  },
+  {
+    icon: '📍',
+    label: 'Locations Teaser',
+    type: 'Announcement',
+    typeColor: 'var(--green)',
+    typeBg: 'var(--green-bg)',
+    name: 'locations',
+    nameHint: 'Name must be exactly "locations"',
+    fields: [
+      { field: 'Title', usage: 'Heading — use | to split main/accent (e.g. Find a Fusk-it Near|you.)' },
+      { field: 'Subtitle', usage: 'Stats as stores|cities|symbol (e.g. 4|2|∞)' },
+      { field: 'CTA Label', usage: 'Button text (e.g. VIEW ALL STORES)' },
+      { field: 'CTA Link', usage: 'Button href (e.g. /locations)' },
+    ],
+  },
+];
+
+const HomepageSectionsGuide: React.FC = () => {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+      {/* Header (always visible) */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 cursor-pointer transition-colors"
+        style={{ background: open ? 'var(--bg-card2)' : 'var(--bg-card)', borderBottom: open ? '1px solid var(--border)' : 'none' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-card2)'; }}
+        onMouseLeave={e => { if (!open) (e.currentTarget as HTMLElement).style.background = 'var(--bg-card)'; }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-[14px]">🏠</span>
+          <div className="text-left">
+            <div className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>Homepage Sections Guide</div>
+            <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+              How to name and configure banners to control each homepage section on the website
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-[10px] font-semibold px-2 py-[2px] rounded-full" style={{ background: 'var(--orange-light)', color: 'var(--orange)' }}>
+            {open ? 'Hide' : 'Show guide'}
+          </span>
+          <svg
+            viewBox="0 0 24 24" className="w-[12px] h-[12px] transition-transform duration-200"
+            style={{ color: 'var(--text-muted)', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+
+      {/* Guide grid (collapsible) */}
+      {open && (
+        <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          {SECTION_GUIDE.map((section) => (
+            <div
+              key={section.label}
+              className="flex flex-col gap-2 rounded-[10px] p-3"
+              style={{ background: 'var(--bg-card2)', border: '1px solid var(--border)' }}
+            >
+              {/* Section header */}
+              <div className="flex items-center gap-2">
+                <span className="text-[16px]">{section.icon}</span>
+                <div>
+                  <div className="text-[11px] font-bold" style={{ color: 'var(--text-primary)' }}>{section.label}</div>
+                  <span
+                    className="text-[9px] font-bold px-[6px] py-[1px] rounded-full"
+                    style={{ background: section.typeBg, color: section.typeColor }}
+                  >
+                    {section.type}
+                  </span>
+                </div>
+              </div>
+
+              {/* Name requirement */}
+              <div className="rounded-[6px] px-2 py-[6px]" style={{ background: 'rgba(212,114,42,0.07)', border: '1px solid rgba(212,114,42,0.15)' }}>
+                <div className="text-[9px] font-bold uppercase tracking-wide mb-[2px]" style={{ color: 'var(--orange)' }}>Internal Name</div>
+                <code className="text-[10px] font-bold block" style={{ color: 'var(--text-primary)' }}>{section.name}</code>
+                <div className="text-[9px] mt-[2px]" style={{ color: 'var(--text-muted)' }}>{section.nameHint}</div>
+              </div>
+
+              {/* Field mapping */}
+              <div className="flex flex-col gap-[4px]">
+                {section.fields.map(f => (
+                  <div key={f.field} className="flex items-start gap-[6px]">
+                    <span className="text-[9px] font-bold flex-shrink-0 mt-[1px] w-[58px]" style={{ color: 'var(--orange)' }}>{f.field}</span>
+                    <span className="text-[9px] leading-[1.5]" style={{ color: 'var(--text-muted)' }}>{f.usage}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+

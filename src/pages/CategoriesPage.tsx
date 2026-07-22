@@ -23,7 +23,7 @@ export interface Category {
   imageUrl?: string;
 }
 
-type FilterType = 'all' | 'visible' | 'hidden';
+type FilterType = 'all' | 'visible' | 'hidden' | 'veg' | 'nonveg';
 type SortType = 'order' | 'name' | 'items' | 'recent';
 
 /* ─── SVG Icons ─── */
@@ -155,7 +155,9 @@ export const CategoriesPage: React.FC = () => {
     }
 
     if (filter === 'visible') result = result.filter(c => c.visible);
-    if (filter === 'hidden') result = result.filter(c => !c.visible);
+    if (filter === 'hidden')  result = result.filter(c => !c.visible);
+    if (filter === 'veg')    result = result.filter(c => (c.type || '').toLowerCase() === 'veg');
+    if (filter === 'nonveg') result = result.filter(c => (c.type || '').toLowerCase() !== 'veg');
 
     if (sortBy === 'name') result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     if (sortBy === 'items') result = [...result].sort((a, b) => b.itemCount - a.itemCount);
@@ -325,25 +327,30 @@ export const CategoriesPage: React.FC = () => {
 
         {/* Filter buttons */}
         {([
-          { key: 'all', label: 'All', icon: <EyeIcon /> },
-          { key: 'visible', label: 'Visible', icon: <EyeIcon /> },
-          { key: 'hidden', label: 'Hidden', icon: <EyeOffIcon /> },
-        ] as const).map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className="flex items-center gap-[6px] px-[14px] py-[8px] rounded-lg text-xs cursor-pointer transition-all"
-            style={{
-              background: 'var(--bg-card)',
-              border: `1px solid ${filter === f.key ? 'var(--orange)' : 'var(--border)'}`,
-              color: filter === f.key ? 'var(--orange)' : 'var(--text-secondary)',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
-            <span style={{ color: filter === f.key ? 'var(--orange)' : 'var(--text-secondary)' }}>{f.icon}</span>
-            {f.label}
-          </button>
-        ))}
+          { key: 'all'    as FilterType, label: 'All',      icon: <EyeIcon />,    activeColor: 'var(--orange)', activeBg: 'var(--orange-light)' },
+          { key: 'visible'as FilterType, label: 'Visible',  icon: <EyeIcon />,    activeColor: 'var(--green)',  activeBg: 'var(--green-bg)'    },
+          { key: 'hidden' as FilterType, label: 'Hidden',   icon: <EyeOffIcon />, activeColor: 'var(--red)',    activeBg: 'var(--red-bg)'      },
+          { key: 'veg'    as FilterType, label: '🌿 Veg',   icon: null,           activeColor: '#22a05a',       activeBg: '#e6f9ef'            },
+          { key: 'nonveg' as FilterType, label: '🍖 Non-Veg',icon: null,          activeColor: '#d43a1e',       activeBg: '#fdecea'            },
+        ]).map(f => {
+          const isActive = filter === f.key;
+          return (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className="flex items-center gap-[5px] px-[12px] py-[7px] rounded-[20px] text-[11px] font-semibold cursor-pointer transition-all whitespace-nowrap"
+              style={{
+                background: isActive ? f.activeBg : 'var(--bg-card)',
+                border: `1.5px solid ${isActive ? f.activeColor : 'var(--border)'}`,
+                color: isActive ? f.activeColor : 'var(--text-secondary)',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+            >
+              {f.icon && <span style={{ color: isActive ? f.activeColor : 'var(--text-secondary)' }}>{f.icon}</span>}
+              {f.label}
+            </button>
+          );
+        })}
 
         <select
           value={sortBy}
@@ -360,9 +367,11 @@ export const CategoriesPage: React.FC = () => {
 
       {/* ── Section Label ── */}
       <div className="text-[11px] font-bold uppercase tracking-[.08em] mt-1" style={{ color: 'var(--text-muted)' }}>
-        {filter === 'all' ? `All categories (${filteredCategories.length})` :
-          filter === 'visible' ? `Visible categories (${filteredCategories.length})` :
-            `Hidden categories (${filteredCategories.length})`}
+        {filter === 'all'     ? `All categories (${filteredCategories.length})` :
+         filter === 'visible' ? `Visible categories (${filteredCategories.length})` :
+         filter === 'hidden'  ? `Hidden categories (${filteredCategories.length})` :
+         filter === 'veg'     ? `🌿 Veg categories (${filteredCategories.length})` :
+                                `🍖 Non-Veg categories (${filteredCategories.length})`}
       </div>
 
       {/* ── Category Grid ── */}

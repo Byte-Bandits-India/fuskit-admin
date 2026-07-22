@@ -677,7 +677,14 @@ export const bannersApi = {
     };
     return fetch(`${BASE_URL}/banners`, { method: 'POST', headers, body: formData })
       .then(async res => {
-        if (!res.ok) throw new Error('Failed to create banner');
+        if (!res.ok) {
+          let msg = `Failed to create banner (${res.status})`;
+          try {
+            const body = await res.json();
+            msg = body.error || body.message || msg;
+          } catch {}
+          throw new Error(msg);
+        }
         return (await res.json()) as { data: BannerDTO };
       });
   },
@@ -689,7 +696,14 @@ export const bannersApi = {
     };
     return fetch(`${BASE_URL}/banners/${id}`, { method: 'PUT', headers, body: formData })
       .then(async res => {
-        if (!res.ok) throw new Error('Failed to update banner');
+        if (!res.ok) {
+          let msg = `Failed to update banner (${res.status})`;
+          try {
+            const body = await res.json();
+            msg = body.error || body.message || msg;
+          } catch {}
+          throw new Error(msg);
+        }
         return (await res.json()) as { data: BannerDTO };
       });
   },
