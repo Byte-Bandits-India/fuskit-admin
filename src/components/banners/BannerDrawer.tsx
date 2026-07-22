@@ -419,7 +419,15 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
 
       await onSave(fd);
     } catch (e: any) {
-      setErrors({ general: e.message || 'Failed to save banner' });
+      const errorMsg = String(e?.message || e || '');
+      if (errorMsg.includes('413') || errorMsg.includes('FILE_TOO_LARGE') || errorMsg.includes('Payload Too Large')) {
+        setErrors({ general: 'Uploaded file size is too large (HTTP 413). Maximum allowed size is 50MB for videos and 10MB for images.' });
+      } else {
+        setErrors({ general: errorMsg.replace(/^Error:\s*/, '') || 'Failed to save banner' });
+      }
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -603,8 +611,14 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
                   <FieldBlock label="Video file" optional="or enter a URL in the field above" error={errors.video}>
                     <input ref={videoRef} type="file" accept=".mp4,.webm,.mov" hidden
                       onChange={e => {
-                        if (e.target.files?.[0]) {
-                          setVideoFile(e.target.files[0]);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 50 * 1024 * 1024) {
+                            setErrors(prev => ({ ...prev, video: 'Video file size exceeds 50MB limit. Please select a smaller file.' }));
+                            if (videoRef.current) videoRef.current.value = '';
+                            return;
+                          }
+                          setVideoFile(file);
                           setRemoveVideo(false);
                           if (errors.video) setErrors(prev => ({ ...prev, video: undefined }));
                         }
@@ -657,8 +671,14 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
                   <FieldBlock label={cfg.desktopImageLabel} required={type === 'hero'} error={errors.desktopImage}>
                     <input ref={desktopRef} type="file" accept="image/*" hidden
                       onChange={e => {
-                        if (e.target.files?.[0]) {
-                          setDesktopImage(e.target.files[0]);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 10 * 1024 * 1024) {
+                            setErrors(prev => ({ ...prev, desktopImage: 'Desktop image size exceeds 10MB limit. Please select a smaller file.' }));
+                            if (desktopRef.current) desktopRef.current.value = '';
+                            return;
+                          }
+                          setDesktopImage(file);
                           setRemoveDesktopImage(false);
                           if (errors.desktopImage) setErrors(prev => ({ ...prev, desktopImage: undefined }));
                         }
@@ -707,8 +727,14 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
                   <FieldBlock label={cfg.mobileImageLabel || 'Mobile image'} optional="optional — uses desktop if empty">
                     <input ref={mobileRef} type="file" accept="image/*" hidden
                       onChange={e => {
-                        if (e.target.files?.[0]) {
-                          setMobileImage(e.target.files[0]);
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 10 * 1024 * 1024) {
+                            setErrors(prev => ({ ...prev, general: 'Mobile image size exceeds 10MB limit. Please select a smaller file.' }));
+                            if (mobileRef.current) mobileRef.current.value = '';
+                            return;
+                          }
+                          setMobileImage(file);
                           setRemoveMobileImage(false);
                         }
                       }} />
