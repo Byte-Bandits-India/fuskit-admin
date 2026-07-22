@@ -168,7 +168,7 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
   const [enabled, setEnabled] = useState(true);
 
   // Validation & Submitting state
-  const [errors, setErrors] = useState<{ name?: string; title?: string; schedule?: string; general?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; title?: string; desktopImage?: string; video?: string; schedule?: string; general?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // File selection state
@@ -194,6 +194,7 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
   const desktopRef = useRef<HTMLInputElement>(null);
   const mobileRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const cfg = getFieldConfig(type, name);
   const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:5001/api';
@@ -203,6 +204,33 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
     if (url.startsWith('http')) return url;
     return `${apiBase}${url.startsWith('/') ? '' : '/'}${url.replace(/^\/api/, '')}`;
   }
+
+  // Handle banner type tab switching cleanly
+  const handleTypeChange = (newType: BannerType) => {
+    setType(newType);
+    setErrors(prev => ({ ...prev, video: undefined, desktopImage: undefined, general: undefined }));
+
+    const newCfg = getFieldConfig(newType, name);
+
+    // If switching to a type that doesn't support video (like hero, announcement, popup, story, locations), purge video files
+    if (!newCfg.showVideo) {
+      setVideoFile(null);
+      setExistingVideoUrl(null);
+      setRemoveVideo(true);
+      if (videoRef.current) videoRef.current.value = '';
+      if (ctaLink && (ctaLink.includes('/uploads/banners/') || ctaLink.match(/\.(mp4|webm|mov)$/i))) {
+        setCtaLink('');
+      }
+    }
+
+    // If switching to a type that doesn't support mobile image, purge mobile image
+    if (!newCfg.showMobileImage) {
+      setMobileImage(null);
+      setExistingMobileUrl(null);
+      setRemoveMobileImage(true);
+      if (mobileRef.current) mobileRef.current.value = '';
+    }
+  };
 
   // Keyboard shortcut listener (Escape to close)
   useEffect(() => {
@@ -296,7 +324,7 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
   }, [videoFile]);
 
   const handleSubmit = async () => {
-    const newErrors: { name?: string; title?: string; schedule?: string } = {};
+    const newErrors: { name?: string; title?: string; desktopImage?: string; video?: string; schedule?: string; general?: string } = {};
 
     if (!name.trim()) {
       newErrors.name = 'Internal banner name is required';
@@ -304,16 +332,43 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
     if (!title.trim()) {
       newErrors.title = 'Banner title is required';
     }
+
+    // Hero banner specific validations
+    if (type === 'hero') {
+      const hasDesktopImage = !!desktopImage || (!!existingDesktopUrl && !removeDesktopImage);
+      if (!hasDesktopImage) {
+        newErrors.desktopImage = 'Desktop background image is required for Hero banners';
+      }
+      if (videoFile || (existingVideoUrl && !removeVideo)) {
+        newErrors.video = 'Hero banners cannot contain video. Please remove video before saving as Hero.';
+      }
+    }
+
+    // File size validations
+    if (desktopImage && desktopImage.size > 10 * 1024 * 1024) {
+      newErrors.desktopImage = 'Desktop image size must be less than 10MB';
+    }
+    if (mobileImage && mobileImage.size > 10 * 1024 * 1024) {
+      newErrors.general = 'Mobile image size must be less than 10MB';
+    }
+    if (videoFile && videoFile.size > 50 * 1024 * 1024) {
+      newErrors.video = 'Video file size must be less than 50MB';
+    }
+
+    // Schedule validation
     if (scheduleEnabled) {
       if (!startDate) {
         newErrors.schedule = 'Start date is required when schedule is enabled';
       } else if (endDate && new Date(endDate) < new Date(startDate)) {
-        newErrors.schedule = 'End date must be after or equal to start date';
+        newErrors.schedule = 'End date must be on or after start date';
       }
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
       return;
     }
 
@@ -330,7 +385,9 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
       fd.append('ctaLabel', ctaLabel.trim());
 
       // Only send text ctaLink when no video file is uploaded or active
-      if (!videoFile && !removeVideo) {
+      if (!videoFile && !removeVideo && type !== 'hero') {
+        fd.append('ctaLink', ctaLink.trim());
+      } else if (type === 'hero') {
         fd.append('ctaLink', ctaLink.trim());
       }
 
@@ -342,21 +399,21 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
       fd.append('endDate', scheduleEnabled ? endDate : '');
       fd.append('endTime', scheduleEnabled ? endTime : '');
 
-      if (desktopImage) {
+      if (desktopImage && cfg.showDesktopImage) {
         fd.append('desktopImage', desktopImage);
       } else if (removeDesktopImage) {
         fd.append('removeDesktopImage', 'true');
       }
 
-      if (mobileImage) {
+      if (mobileImage && cfg.showMobileImage) {
         fd.append('mobileImage', mobileImage);
       } else if (removeMobileImage) {
         fd.append('removeMobileImage', 'true');
       }
 
-      if (videoFile) {
+      if (videoFile && cfg.showVideo) {
         fd.append('videoFile', videoFile);
-      } else if (removeVideo) {
+      } else if (removeVideo || !cfg.showVideo) {
         fd.append('removeVideo', 'true');
       }
 
@@ -434,7 +491,7 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
           <div className="px-5 py-5 flex flex-col gap-0">
 
             {/* General Error Banner */}
@@ -449,20 +506,27 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
             <SectionTitle label="Banner type" />
             <div className="grid grid-cols-2 gap-2 mb-5">
               {TYPE_OPTIONS.map(t => (
-                <button key={t.key} onClick={() => setType(t.key)}
-                  className="flex items-center gap-[9px] px-3 py-[9px] rounded-[10px] cursor-pointer transition-all text-left"
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => handleTypeChange(t.key)}
+                  className="flex items-center gap-[9px] px-3 py-[9px] rounded-[10px] cursor-pointer transition-all text-left relative"
                   style={{
                     border: `1.5px solid ${type === t.key ? t.color : 'var(--border)'}`,
-                    background: type === t.key ? t.bg : 'transparent',
+                    background: type === t.key ? t.bg : 'var(--bg-card2)',
+                    boxShadow: type === t.key ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
                   }}
                 >
                   <div className="flex items-center justify-center rounded-lg flex-shrink-0 text-[15px]"
                     style={{ width: 30, height: 30, background: t.bg }}>
                     {t.emoji}
                   </div>
-                  <div>
-                    <div className="text-xs font-semibold" style={{ color: type === t.key ? t.color : 'var(--text-secondary)' }}>{t.label}</div>
-                    <div className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{t.sub}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold flex items-center justify-between" style={{ color: type === t.key ? t.color : 'var(--text-secondary)' }}>
+                      <span>{t.label}</span>
+                      {type === t.key && <span className="text-[10px] font-bold">✓</span>}
+                    </div>
+                    <div className="text-[10px] truncate" style={{ color: 'var(--text-muted)' }}>{t.sub}</div>
                   </div>
                 </button>
               ))}
@@ -536,12 +600,13 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
 
                 {/* Video Upload — for reel / menu banners */}
                 {cfg.showVideo && (
-                  <FieldBlock label="Video file" optional="or enter a URL in the field above">
+                  <FieldBlock label="Video file" optional="or enter a URL in the field above" error={errors.video}>
                     <input ref={videoRef} type="file" accept=".mp4,.webm,.mov" hidden
                       onChange={e => {
                         if (e.target.files?.[0]) {
                           setVideoFile(e.target.files[0]);
                           setRemoveVideo(false);
+                          if (errors.video) setErrors(prev => ({ ...prev, video: undefined }));
                         }
                       }} />
                     
@@ -554,6 +619,7 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
                           muted autoPlay loop playsInline
                         />
                         <button
+                          type="button"
                           onClick={() => {
                             setVideoFile(null);
                             setRemoveVideo(true);
@@ -588,12 +654,13 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
 
                 {/* Desktop Image */}
                 {cfg.showDesktopImage && (
-                  <FieldBlock label={cfg.desktopImageLabel}>
+                  <FieldBlock label={cfg.desktopImageLabel} required={type === 'hero'} error={errors.desktopImage}>
                     <input ref={desktopRef} type="file" accept="image/*" hidden
                       onChange={e => {
                         if (e.target.files?.[0]) {
                           setDesktopImage(e.target.files[0]);
                           setRemoveDesktopImage(false);
+                          if (errors.desktopImage) setErrors(prev => ({ ...prev, desktopImage: undefined }));
                         }
                       }} />
                     
@@ -607,6 +674,7 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
                           style={{ maxHeight: 140 }}
                         />
                         <button
+                          type="button"
                           onClick={() => {
                             setDesktopImage(null);
                             setRemoveDesktopImage(true);
