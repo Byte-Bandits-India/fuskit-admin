@@ -384,11 +384,13 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
       fd.append('altText', altText.trim());
       fd.append('ctaLabel', ctaLabel.trim());
 
-      // Only send text ctaLink when no video file is uploaded or active
-      if (!videoFile && !removeVideo && type !== 'hero') {
-        fd.append('ctaLink', ctaLink.trim());
-      } else if (type === 'hero') {
-        fd.append('ctaLink', ctaLink.trim());
+      // Resolve CTA Link (text URL or existing video path if preserving existing video)
+      let finalCtaLink = ctaLink.trim();
+      if (!finalCtaLink && mode === 'edit' && banner?.ctaLink && existingVideoUrl && !removeVideo && !videoFile) {
+        finalCtaLink = banner.ctaLink;
+      }
+      if (finalCtaLink) {
+        fd.append('ctaLink', finalCtaLink);
       }
 
       fd.append('enabled', String(enabled));
