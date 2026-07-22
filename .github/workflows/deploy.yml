@@ -77,7 +77,7 @@ jobs:
             cd $APP_DIR
 
             echo "🧹 Cleaning old files..."
-            rm -rf dist node_modules package.json package-lock.json
+            rm -rf dist node_modules package.json package-lock.json prisma scripts tsconfig.json .env
 
             echo "📦 Extracting new build..."
             tar -xzf /var/www/deploy.tar.gz -C $APP_DIR
