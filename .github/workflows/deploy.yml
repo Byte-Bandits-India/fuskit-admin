@@ -37,7 +37,7 @@ jobs:
 
       - name: 📦 Create Deployment Package
         run: |
-          tar -czf deploy.tar.gz \
+          tar -czf admin-deploy.tar.gz \
             dist \
             package.json \
             package-lock.json
@@ -48,7 +48,7 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: root
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "deploy.tar.gz"
+          source: "admin-deploy.tar.gz"
           target: "/var/www/"
 
       - name: 🚀 Deploy on Server
@@ -78,7 +78,8 @@ jobs:
             rm -rf dist node_modules package.json package-lock.json prisma scripts tsconfig.json .env
 
             echo "📦 Extracting new build..."
-            tar -xzf /var/www/deploy.tar.gz -C $APP_DIR
+            tar -xzf /var/www/admin-deploy.tar.gz -C $APP_DIR
+            rm -f /var/www/admin-deploy.tar.gz
 
             echo "🌐 Static assets extracted for Nginx serving..."
             # Clean up any legacy conflicting PM2 processes if present
