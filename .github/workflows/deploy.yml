@@ -25,11 +25,11 @@ jobs:
       - name: 🏗 Inject Environment Variables
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "VITE_API_BASE_URL=http://fusk-it.duckdns.org/api" > .env.production
-            echo "VITE_GOOGLE_AUTH_URL=http://fusk-it.duckdns.org/api/auth/google" >> .env.production
+            echo "VITE_API_BASE_URL=https://fusk-it.xylozentech.com/api" > .env.production
+            echo "VITE_GOOGLE_AUTH_URL=https://fusk-it.xylozentech.com/api/auth/google" >> .env.production
           else
-            echo "VITE_API_BASE_URL=http://dev-fusk-it.duckdns.org/api" > .env.production
-            echo "VITE_GOOGLE_AUTH_URL=http://dev-fusk-it.duckdns.org/api/auth/google" >> .env.production
+            echo "VITE_API_BASE_URL=https://dev-fusk-it.xylozentech.com/api" > .env.production
+            echo "VITE_GOOGLE_AUTH_URL=https://dev-fusk-it.xylozentech.com/api/auth/google" >> .env.production
           fi
 
       - name: 🏗 Build Vite App
@@ -64,12 +64,10 @@ jobs:
             if [ "${{ github.ref_name }}" = "main" ]; then
               echo "📦 PRODUCTION DEPLOY"
               APP_DIR="/var/www/admin/prod"
-              PORT=3000
               APP_NAME="vite-admin-prod"
             else
               echo "🧪 STAGING DEPLOY"
               APP_DIR="/var/www/admin/dev"
-              PORT=3001
               APP_NAME="vite-admin-staging"
             fi
 
@@ -82,15 +80,9 @@ jobs:
             echo "📦 Extracting new build..."
             tar -xzf /var/www/deploy.tar.gz -C $APP_DIR
 
-            echo "🔁 Restarting PM2..."
-
-            pm2 describe $APP_NAME > /dev/null
-            if [ $? -eq 0 ]; then
-              pm2 restart $APP_NAME --update-env
-            else
-              pm2 serve dist $PORT --spa --name "$APP_NAME"
-            fi
-
+            echo "🌐 Static assets extracted for Nginx serving..."
+            # Clean up any legacy conflicting PM2 processes if present
+            pm2 delete $APP_NAME 2>/dev/null || true
             pm2 save
 
             echo "✅ Deployment completed!"
