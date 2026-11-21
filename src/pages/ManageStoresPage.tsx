@@ -6,7 +6,7 @@ import { DeleteModal } from '@/components/categories/DeleteModal';
 import { storesApi, menuItemsApi, categoriesApi } from '@/services/api';
 
 /* ─── Helpers ─── */
-const API_BASE_URL = (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_BASE_URL || '';
+const API_BASE_URL = (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_BASE_URL || 'https://fuskit-api.xylozentech.com/api';
 const getImageUrl = (url?: string) => {
   if (!url) return '';
   try {
