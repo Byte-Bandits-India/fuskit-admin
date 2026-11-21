@@ -1,9 +1,12 @@
 import type { UserData, ModulePerms } from '@/types';
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
+const rawBase =
+  (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_BASE_URL || '';
 const BASE_URL =
-  (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_BASE_URL ||
-  'https://fuskit-api.xylozentech.com/api';
+  !rawBase || rawBase.includes('fusk-it.xylozentech.com')
+    ? 'https://fuskit-api.xylozentech.com/api'
+    : rawBase;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getToken(): string | null {

@@ -63,7 +63,8 @@ const EyeIcon = () => (
 const getImageUrl = (url?: string | null): string => {
   if (!url) return '';
   if (url.startsWith('blob:')) return url;
-  const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'https://fuskit-api.xylozentech.com/api';
+  const rawApi = (import.meta as any).env.VITE_API_BASE_URL || '';
+  const apiBase = !rawApi || rawApi.includes('fusk-it.xylozentech.com') ? 'https://fuskit-api.xylozentech.com/api' : rawApi;
 
   if (url.startsWith('http://') || url.startsWith('https://')) {
     try {

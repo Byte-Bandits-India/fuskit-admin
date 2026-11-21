@@ -197,7 +197,8 @@ export const BannerDrawer: React.FC<BannerDrawerProps> = ({ open, mode, banner, 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const cfg = getFieldConfig(type, name);
-  const apiBase = (import.meta as any).env.VITE_API_BASE_URL || 'https://fuskit-api.xylozentech.com/api';
+  const rawApi = (import.meta as any).env.VITE_API_BASE_URL || '';
+  const apiBase = !rawApi || rawApi.includes('fusk-it.xylozentech.com') ? 'https://fuskit-api.xylozentech.com/api' : rawApi;
 
   function resolveUrl(url?: string | null): string | null {
     if (!url) return null;
