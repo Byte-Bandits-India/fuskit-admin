@@ -99,6 +99,8 @@ const todayName = DAYS[new Date().getDay()];
 /* ───────── COMPONENT ───────── */
 export const ManageStoresPage: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string>('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<'add' | 'edit'>('add');
@@ -109,15 +111,20 @@ export const ManageStoresPage: React.FC = () => {
   const galleryInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchStores = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await storesApi.list();
-      setStores(res.data);
-      setMeta(res.meta);
-      if (res.data.length > 0 && !selectedId) {
+      setStores(res?.data || []);
+      setMeta(res?.meta || null);
+      if (res?.data?.length > 0 && !selectedId) {
         setSelectedId(res.data[0].id);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e?.message || 'Failed to load stores');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -279,8 +286,30 @@ export const ManageStoresPage: React.FC = () => {
         </button>
       </div>
 
-      {/* ═══ STORE FULL PAGE: 2-column grid ═══ */}
-      {selectedStore && (
+      {/* ═══ ERROR BANNER ═══ */}
+      {error && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm"
+          style={{ background: 'var(--red-bg)', border: '1px solid var(--red)', color: 'var(--red)' }}
+        >
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={fetchStores}
+            className="text-xs font-semibold underline cursor-pointer"
+            style={{ background: 'none', border: 'none', color: 'inherit' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* ═══ LOADING STATE ═══ */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--orange)', borderTopColor: 'transparent' }} />
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Loading store details...</p>
+        </div>
+      ) : selectedStore ? (
         <div className="flex flex-col lg:grid gap-4 items-start" style={{ gridTemplateColumns: '1fr 340px' }}>
 
           {/* ═══ LEFT COLUMN ═══ */}
@@ -565,6 +594,11 @@ export const ManageStoresPage: React.FC = () => {
             </div>
 
           </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>No stores found</p>
+          <button onClick={handleAdd} className="text-xs font-bold underline cursor-pointer" style={{ color: 'var(--orange)' }}>Add your first store</button>
         </div>
       )}
 

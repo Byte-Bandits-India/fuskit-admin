@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { CategoriesPage } from '@/pages/CategoriesPage';
@@ -30,10 +30,10 @@ function App() {
     return localStorage.getItem('fuskit_auth') === 'true';
   });
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     clearTokens();
     setIsAuthenticated(false);
-  };
+  }, []);
 
   if (!isAuthenticated) {
     return <LoginPage onLogin={() => setIsAuthenticated(true)} />;

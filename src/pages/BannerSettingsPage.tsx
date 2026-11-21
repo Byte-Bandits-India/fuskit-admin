@@ -92,6 +92,8 @@ const getImageUrl = (url?: string | null): string => {
 /* ─── Main Page ─── */
 export const BannerSettingsPage: React.FC = () => {
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [meta, setMeta] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -106,6 +108,8 @@ export const BannerSettingsPage: React.FC = () => {
   const [deletingBanner, setDeletingBanner] = useState<Banner | null>(null);
 
   const fetchBanners = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const params: any = {};
       if (statusFilter !== 'all') params.status = statusFilter;
@@ -113,12 +117,17 @@ export const BannerSettingsPage: React.FC = () => {
       if (searchQuery.trim()) params.q = searchQuery.trim();
 
       const res = await bannersApi.list(params);
-      setBanners(res.data);
-      setMeta(res.meta);
-      if (res.data.length > 0 && !selectedId) {
+      setBanners(res?.data || []);
+      setMeta(res?.meta || null);
+      if (res?.data?.length > 0 && !selectedId) {
         setSelectedId(res.data[0].id);
       }
-    } catch (e) { console.error(e); }
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || 'Failed to load banners');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -262,7 +271,23 @@ export const BannerSettingsPage: React.FC = () => {
 
           {/* Banner list */}
           <div className="flex flex-col gap-2">
-            {filtered.map((banner, i) => {
+            {error && (
+              <div className="flex items-center gap-2 p-3 rounded-lg text-xs" style={{ background: 'var(--red-bg)', color: 'var(--red)', border: '1px solid var(--red)' }}>
+                <span className="flex-1">{error}</span>
+                <button onClick={fetchBanners} className="font-bold underline cursor-pointer">Retry</button>
+              </div>
+            )}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2">
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--orange)', borderTopColor: 'transparent' }} />
+                <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Loading banners...</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="text-center py-8 text-xs" style={{ color: 'var(--text-muted)' }}>
+                No banners found
+              </div>
+            ) : (
+              filtered.map((banner, i) => {
               const tc = TYPE_COLORS[banner.type];
               const ss = STATUS_STYLES[banner.status];
               const isSelected = selectedBanner?.id === banner.id;
@@ -457,7 +482,8 @@ export const BannerSettingsPage: React.FC = () => {
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </div>
 

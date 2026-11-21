@@ -54,9 +54,9 @@ export const Topbar: React.FC<TopbarProps> = ({
   const fetchNotifs = async () => {
     try {
       const resCount = await notificationsApi.unreadCount();
-      setUnreadCount(resCount.count);
+      setUnreadCount(resCount?.count ?? (resCount as any)?.data?.count ?? 0);
       const resList = await notificationsApi.list();
-      setNotifications(resList.data);
+      setNotifications(resList?.data || []);
     } catch (e) {
       console.error(e);
     }

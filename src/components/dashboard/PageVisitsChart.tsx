@@ -24,7 +24,7 @@ export const PageVisitsChart: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    analyticsApi.pageVisits().then(res => setData(res)).catch(console.error);
+    analyticsApi.pageVisits().then(res => setData((res as any)?.data ?? res)).catch(console.error);
   }, []);
 
   const activeDataPoints = data?.series ? data.series.map((s, i) => {

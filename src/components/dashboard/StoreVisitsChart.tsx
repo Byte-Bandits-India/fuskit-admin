@@ -16,7 +16,7 @@ export const StoreVisitsChart: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    analyticsApi.storeVisits().then(res => setData(res)).catch(console.error);
+    analyticsApi.storeVisits().then(res => setData((res as any)?.data ?? res)).catch(console.error);
   }, []);
 
   const activeDays = data?.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

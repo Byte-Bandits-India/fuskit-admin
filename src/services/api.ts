@@ -178,7 +178,7 @@ export const usersApi = {
     const qs = entries.length
       ? '?' + new URLSearchParams(entries).toString()
       : '';
-    return request<UserData[]>(`/users${qs}`);
+    return request<any>(`/users${qs}`).then(res => (res?.data ?? res) as UserData[]);
   },
 
   /**
@@ -807,9 +807,9 @@ export interface GA4StatsResponse {
 
 export const analyticsApi = {
   pageVisits: (range?: string) => 
-    request<PageVisitsResponse>(`/analytics/page-visits${range ? `?range=${range}` : ''}`),
+    request<any>(`/analytics/page-visits${range ? `?range=${range}` : ''}`).then(res => (res?.data ?? res) as PageVisitsResponse),
   storeVisits: (range?: string) => 
-    request<StoreVisitsResponse>(`/analytics/store-visits${range ? `?range=${range}` : ''}`),
+    request<any>(`/analytics/store-visits${range ? `?range=${range}` : ''}`).then(res => (res?.data ?? res) as StoreVisitsResponse),
   ga4Stats: () =>
     request<GA4StatsResponse>('/analytics/ga4-stats')
 };
@@ -839,7 +839,7 @@ export interface NotificationDTO {
 
 export const notificationsApi = {
   list: () => request<{ data: NotificationDTO[] }>('/notifications'),
-  unreadCount: () => request<{ count: number }>('/notifications/unread-count'),
+  unreadCount: () => request<any>('/notifications/unread-count').then(res => ({ count: res?.data?.count ?? res?.count ?? 0 })),
   markRead: (id: string) => request<{ message: string }>(`/notifications/${id}/read`, { method: 'PATCH' }),
   markAllRead: () => request<{ message: string }>('/notifications/mark-all-read', { method: 'PATCH' })
 };

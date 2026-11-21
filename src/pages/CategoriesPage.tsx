@@ -134,8 +134,8 @@ export const CategoriesPage: React.FC = () => {
     setError(null);
     try {
       const res = await categoriesApi.list();
-      setCategories(res.data.map(toCategory));
-      setMeta(res.meta);
+      setCategories((res?.data || []).map(toCategory));
+      setMeta(res?.meta || DEFAULT_META);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load categories');
     } finally {

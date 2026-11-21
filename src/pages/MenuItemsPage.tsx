@@ -182,17 +182,27 @@ export const MenuItemsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [itemsRes, catsRes, storesRes] = await Promise.all([
+      const [itemsRes, catsRes, storesRes] = await Promise.allSettled([
         menuItemsApi.list(),
         categoriesApi.list(),
         storesApi.list(),
       ]);
-      setProducts(itemsRes.data.map(toProduct));
-      setMeta(itemsRes.meta);
-      setCategories(catsRes.data);
-      // storesApi may return { data: [...] } or just an array — handle both
-      const storeData = storesRes?.data ?? (storesRes as unknown as { name: string }[]);
-      setStoreNames(Array.isArray(storeData) ? storeData.map((s: { name: string }) => s.name) : ['Chennai', 'Bangalore']);
+
+      if (itemsRes.status === 'fulfilled' && itemsRes.value?.data) {
+        setProducts(itemsRes.value.data.map(toProduct));
+        setMeta(itemsRes.value.meta || DEFAULT_META);
+      } else if (itemsRes.status === 'rejected') {
+        throw itemsRes.reason;
+      }
+
+      if (catsRes.status === 'fulfilled' && catsRes.value?.data) {
+        setCategories(catsRes.value.data);
+      }
+
+      if (storesRes.status === 'fulfilled') {
+        const storeData = storesRes.value?.data ?? (storesRes.value as unknown as { name: string }[]);
+        setStoreNames(Array.isArray(storeData) ? storeData.map((s: { name: string }) => s.name) : ['Chennai', 'Bangalore']);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load menu items');
     } finally {

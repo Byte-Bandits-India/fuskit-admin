@@ -20,7 +20,9 @@ export function useActiveNav(defaultId = 'dashboard') {
   }, [defaultId]);
 
   const setNav = (id: string) => {
-    window.location.hash = id;
+    if (window.location.hash.replace('#', '') !== id) {
+      window.location.hash = id;
+    }
     setActiveId(id);
   };
 
