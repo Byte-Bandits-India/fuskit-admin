@@ -115,7 +115,7 @@ export const LoginPage: React.FC<{ onLogin: () => void }> = ({ onLogin }) => {
                 id="admin-email"
                 type="email"
                 className="login-input"
-                placeholder="admin@fusk-it.com"
+                placeholder="admin@fuskit.com"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
                 autoFocus

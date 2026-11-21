@@ -61,9 +61,9 @@ async function request<T>(path: string, options: RequestInit = {}, _retry = fals
       headers,
     };
     res = await fetch(`${BASE_URL}${path}`, fetchOptions);
-  } catch {
+  } catch (err: any) {
     throw new Error(
-      `Cannot connect to the server (${BASE_URL}). ` +
+      `Cannot connect to the server (${BASE_URL}): ${err?.message || 'Network error'}. ` +
       `Make sure the backend is running.`
     );
   }
